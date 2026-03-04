@@ -13,7 +13,7 @@ A collection of custom skills for Claude Code.
 Register this repository as a plugin marketplace:
 
 ```
-/plugin marketplace add <owner>/<repo>
+/plugin marketplace add mars-mx/skills
 ```
 
 Then install:
