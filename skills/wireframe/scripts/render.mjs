@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // ─────────────────────────────────────────────────────────────────────────────
-// render.mjs — Renders .wf wireframe files to SVG using @wireweave/core
+// render.mjs — Renders .wf wireframe files to SVG or HTML using @wireweave/core
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createRequire } from 'module';
@@ -17,12 +17,13 @@ Usage:
   render.mjs [options] <source> [output]
   render.mjs --source <path> --output <path> [options]
 
-Renders .wf wireframe files to SVG using @wireweave/core.
+Renders .wf wireframe files to SVG or HTML using @wireweave/core.
 <source> can be a single .wf file or a directory containing .wf files.
 
 Options:
   -s, --source <path>    Source .wf file or directory (or first positional arg)
-  -o, --output <path>    Output directory for SVG files (or second positional arg)
+  -o, --output <path>    Output directory for rendered files (or second positional arg)
+  -f, --format <type>    Output format: svg or html (default: svg)
   -t, --theme <name>     Theme to use for rendering (default: light)
   -w, --width <pixels>   Canvas width in pixels (default: 1200)
       --padding <pixels> Padding around the wireframe in pixels (default: 24)
@@ -31,6 +32,7 @@ Options:
 
 Examples:
   render.mjs wireframes/src wireframes/svg
+  render.mjs wireframes/src wireframes/html --format html
   render.mjs wireframes/src/login.wf wireframes/svg --theme dark
   render.mjs -s wireframes/src -o wireframes/svg -w 800
   render.mjs wireframes/src wireframes/svg --watch
@@ -42,6 +44,7 @@ function parseArgs(argv) {
   const opts = {
     source: null,
     output: null,
+    format: 'svg',
     theme: 'light',
     width: 1200,
     padding: 24,
@@ -75,6 +78,16 @@ function parseArgs(argv) {
 
     if (arg === '-o' || arg === '--output') {
       opts.output = expectValue(argv, i, arg);
+      i += 2;
+      continue;
+    }
+
+    if (arg === '-f' || arg === '--format') {
+      const val = expectValue(argv, i, arg);
+      if (val !== 'svg' && val !== 'html') {
+        die(`Option ${arg} must be 'svg' or 'html', got '${val}'.`);
+      }
+      opts.format = val;
       i += 2;
       continue;
     }
@@ -185,22 +198,31 @@ function collectFiles(sourcePath) {
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
 
-function renderFiles(files, outDir, { parse, renderToSvg }, renderOpts) {
+function renderFiles(files, outDir, core, renderOpts, format) {
   mkdirSync(outDir, { recursive: true });
 
   let rendered = 0;
   let errors = 0;
+  const ext = format === 'html' ? '.html' : '.svg';
 
   for (const file of files) {
     const name = basename(file, '.wf');
     try {
       const src = readFileSync(file, 'utf-8');
-      const doc = parse(src);
-      const result = renderToSvg(doc, renderOpts);
-      const svg = typeof result === 'string' ? result : result.svg;
-      const outPath = join(outDir, `${name}.svg`);
-      writeFileSync(outPath, svg);
-      console.log(`  ${name}.wf -> ${name}.svg`);
+      const doc = core.parse(src);
+      let output;
+
+      if (format === 'html') {
+        const result = core.renderToHtml(doc, renderOpts);
+        output = typeof result === 'string' ? result : result.html;
+      } else {
+        const result = core.renderToSvg(doc, renderOpts);
+        output = typeof result === 'string' ? result : result.svg;
+      }
+
+      const outPath = join(outDir, `${name}${ext}`);
+      writeFileSync(outPath, output);
+      console.log(`  ${name}.wf -> ${name}${ext}`);
       rendered++;
     } catch (err) {
       console.error(`  ${name}.wf: ERROR - ${err.message}`);
@@ -269,7 +291,7 @@ function main() {
 
   const run = () => {
     const files = collectFiles(sourcePath);
-    const { rendered, errors } = renderFiles(files, outDir, core, renderOpts);
+    const { rendered, errors } = renderFiles(files, outDir, core, renderOpts, opts.format);
     console.log(`\nDone: ${rendered} rendered, ${errors} error(s)`);
     return errors;
   };

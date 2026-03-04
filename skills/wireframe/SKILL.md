@@ -167,25 +167,30 @@ page "Login" {
 
 Wrap any component in `relative { ... }` and add a `marker N` to tag it. Then reference markers by number in the `annotations` block. Marker colors: `blue` (default), `red`, `green`, `yellow`, `purple`, `orange`.
 
-### 5. Rendering to SVG
+### 5. Rendering
 
-Use the bundled render script to convert `.wf` files to SVG:
+Use the bundled render script to convert `.wf` files to SVG or HTML:
 
 ```bash
 node <skill-path>/scripts/render.mjs wireframes/src wireframes/svg
+node <skill-path>/scripts/render.mjs wireframes/src wireframes/html --format html
 ```
 
 Where `<skill-path>` is the path to this skill directory. The script:
 - Reads all `.wf` files from the source directory
-- Renders each to SVG using `@wireweave/core`
-- Writes SVGs to the output directory (created if missing)
+- Renders each to SVG (default) or HTML using `@wireweave/core`
+- Writes output to the target directory (created if missing)
+- Supports `--format svg|html` to choose output format
 - Supports `--theme dark` flag for dark mode
-- Supports `--width 1200` to set SVG width (default: 1200)
+- Supports `--width 1200` to set canvas width (default: 1200)
+- Supports `--watch` to re-render on file changes
 
 To render a single file:
 ```bash
 node <skill-path>/scripts/render.mjs wireframes/src/login.wf wireframes/svg/
 ```
+
+Run `node <skill-path>/scripts/render.mjs --help` for all options.
 
 ### 6. Using in Markdown / GitHub
 
