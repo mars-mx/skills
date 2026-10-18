@@ -8,15 +8,5 @@
     "description": "Custom Claude Code Skills",
     "version": "0.0.1"
   },
-  "plugins": [
-    {
-      "name": "wireframe-skills",
-      "description": "UI wireframe creation using the Wireweave DSL — a compact, token-efficient markup language that renders to SVG",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/wireframe"
-      ]
-    }
-  ]
+  "plugins": []
 }

@@ -4,7 +4,7 @@ A collection of custom skills for Claude Code.
 
 ## Skills
 
-- **[wireframe](./skills/wireframe)** — Create UI wireframes using the Wireweave DSL, a compact text format that renders to SVG. Supports component annotations for design specs.
+_No skills yet._
 
 ## Installation
 
@@ -16,10 +16,10 @@ Register this repository as a plugin marketplace:
 /plugin marketplace add mars-mx/skills
 ```
 
-Then install:
+Then install a plugin from it:
 
 ```
-/plugin install wireframe-skills@mars-skills
+/plugin install <plugin-name>@mars-skills
 ```
 
 ### Manual
