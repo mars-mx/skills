@@ -18,9 +18,18 @@ if (todo.length === 0) {
   process.exit(0);
 }
 
+const failed = [];
 for (const c of todo) {
   console.log(`\n> ${c.fix}`);
-  execSync(c.fix, { cwd: root, stdio: "inherit" });
+  try {
+    execSync(c.fix, { cwd: root, stdio: "inherit" });
+  } catch {
+    failed.push(c.id);
+  }
+}
+if (failed.length) {
+  console.log(`\nInstall failed: ${failed.join(", ")}`);
+  process.exitCode = 1;
 }
 
 if (todo.some((c) => c.id === "shadcn-mcp")) {

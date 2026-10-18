@@ -23,18 +23,18 @@ On any `FAIL`, stop and handle it as the `ux-design` skill describes (install of
 
 ## 2. Scan
 
-Create a temporary workdir outside the repo and run the deterministic scan:
+The **workdir** is `.ux-audit/` in the project root. It holds the temporary report, ignores itself in git, and sits inside the project, so subagents can write to it without permission prompts. Shell variables do not survive between commands: write the path `.ux-audit/` literally in every later command and subagent prompt.
 
 ```bash
-WORKDIR=$(mktemp -d -t ux-audit)
-node ${CLAUDE_SKILL_DIR}/../ux-design/scripts/scan.mjs . > "$WORKDIR/candidates.jsonl"
+mkdir -p .ux-audit && echo '*' > .ux-audit/.gitignore
+node ${CLAUDE_SKILL_DIR}/../ux-design/scripts/scan.mjs . > .ux-audit/candidates.jsonl
 ```
 
-List every UI source file (`*.tsx`, `*.jsx` outside `node_modules` and build output) and split them into batches of about 15 files, keeping each directory in one batch where possible. Write each batch to `$WORKDIR/batch-<n>.txt`.
+List every UI source file (`*.tsx`, `*.jsx` outside `node_modules` and build output) and split them into batches of about 15 files, keeping each directory in one batch where possible. Write each batch to `.ux-audit/batch-<n>.txt`.
 
 ## 3. Review (Haiku, parallel)
 
-Spawn one Agent per batch in a single message, with `model: "haiku"`. Each prompt contains: the rules path, the `ux.config.json` path, the batch file, the candidates file, and the output path `$WORKDIR/findings-<n>.jsonl`. Instruct each agent:
+Spawn one Agent per batch in a single message, with `model: "haiku"`. Each prompt contains: the rules path, the `ux.config.json` path, the batch file, the candidates file, and the output path `.ux-audit/findings-<n>.jsonl`. Instruct each agent:
 
 > Read the rules file and `ux.config.json`. Then read every file in your batch completely. Judge every scanner candidate for your files: confirmed or false positive. Also report violations the scanner cannot see, mainly UX-C1 (a catalog component exists for hand-built UI) and UX-C5 (page-local components); list the catalog folders to know what exists. Skip anything in `exceptions`. Write one JSON object per confirmed violation to your output file:
 >
@@ -46,7 +46,7 @@ The step is done when every batch has a findings file.
 
 ## 4. Summarize (Opus)
 
-Spawn one Agent with `model: "opus"`. It reads all `findings-*.jsonl`, removes duplicates, and writes `$WORKDIR/report.md`:
+Spawn one Agent with `model: "opus"`. It reads all `findings-*.jsonl`, removes duplicates, and writes `.ux-audit/report.md`:
 
 - totals per rule and per severity
 - the findings grouped by tier: **reuse** (auto-fixable), **extend** and **new** (need approval)
@@ -74,4 +74,4 @@ Report fixed, skipped, and remaining findings with their counts.
 
 ## 7. Clean up
 
-Delete `$WORKDIR` unless the user wants to keep the report.
+Delete `.ux-audit/` unless the user wants to keep the report.

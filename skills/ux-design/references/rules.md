@@ -97,7 +97,7 @@ function StatBox({ label, value }) {
 
 ## UX-T1: Theme tokens for color
 
-Use the semantic tokens from the shadcn theme: `bg-background`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, and so on. This rule applies inside the catalog too.
+Use the semantic tokens from the shadcn theme: `bg-background`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, and so on. The rule applies to feature code. Stock shadcn components ship a few literal colors (`text-white` on destructive variants, `bg-black/50` overlays); leave those as upstream wrote them.
 
 ```tsx
 // GO

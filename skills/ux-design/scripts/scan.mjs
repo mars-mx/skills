@@ -47,7 +47,7 @@ const LINE_RULES = [
   },
   {
     rule: "UX-T1",
-    scope: "all",
+    scope: "feature",
     test: (l) =>
       STYLE_CONTEXT.test(l) && (/#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla|oklch)\(/.test(l) || PALETTE.test(l)),
   },
