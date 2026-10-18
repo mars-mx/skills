@@ -61,15 +61,11 @@ The decision changes only when the user asks to change it. A change of mechanism
 
 Every UI change starts from a **design spec**: the expected result that step 5 verifies against. A spec the user gave (mockup, screenshot, Figma frame, written description) is used as is.
 
-Without one, spawn a subagent to write it, so the catalog search stays out of your context. Give it the user's request, the catalog paths from `ux.config.json`, and the Storybook URL. It writes `.ux-spec/<feature>.md` (create the folder with `mkdir -p .ux-spec && echo '*' > .ux-spec/.gitignore`) containing:
+Without one, spawn a `general-purpose` subagent to create it as a **Claude Design artifact**, so the catalog search stays out of your context. Give it the user's request, the catalog paths from `ux.config.json`, the Storybook URL, and these instructions:
 
-- every screen and region of the change, top to bottom
-- for each region: the catalog component, its variant and props, and its story (`*.stories.tsx` file and story name)
-- every component to add or extend, marked with its tier and the reason no existing component fits
-- the states to show: loading, empty, error, disabled, narrow width
-- a screenshot of each listed story from Storybook, saved next to the spec, when Storybook runs
+> Find the Design artifact type with the Artifact tool (`action: "quickstart"`, `intent: "design"`), create the artifact from its `type_url` with the title `<feature> spec`, and follow the type's instructions to fill it. Draw one artboard per screen of the change, at desktop and narrow width, built to look like the project's catalog components (use their Storybook stories as reference). Annotate every region with its catalog component, variant, props, and story (`*.stories.tsx` file and story name). Add one artboard per state: loading, empty, error, disabled. Put every component to add or extend on a separate "Additions" artboard, marked with its tier and the reason no existing component fits. You are done when every region maps to a story or to a marked addition. Reply with the artifact URL.
 
-The subagent is done when every region maps to a story or to a marked addition. Show the user the spec. Their confirmation approves the listed additions for step 4; build only after it.
+Open the artifact for the user (`Artifact`, `action: "open"`). Their confirmation approves the listed additions for step 4; build only after it.
 
 ## 4. Build from the catalog
 
@@ -92,10 +88,10 @@ After approval:
 
 ## 5. Verify
 
-Open the changed screens in the browser (Claude in Chrome or Playwright, whichever the session has) and screenshot every region and state from the spec, at desktop and narrow width. Compare each screenshot with the spec:
+Open the changed screens in the browser (Claude in Chrome or Playwright, whichever the session has) and screenshot every region and state from the spec, at desktop and narrow width. Compare each screenshot with the spec (a Design artifact: open it in the browser next to the app):
 
 - the component in each region is the one the spec names, in the named variant
-- it looks like its story screenshot or the user's mockup: spacing, alignment, color, typography
+- it looks like its artboard or the user's mockup: spacing, alignment, color, typography
 - every listed state renders
 
 Fix each mismatch and screenshot again. The step is done when every region and state matches, or the remaining differences are listed for the user with their screenshots.

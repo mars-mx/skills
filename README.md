@@ -10,7 +10,7 @@ Catalog-first UI on shadcn/ui: every page is built from one component catalog (s
 
 | Skill | Invocation | Purpose |
 | --- | --- | --- |
-| `ux-design` | automatic on UI work | Runs a preflight gate, records project decisions in `ux.config.json`, maps each UI change to catalog components in a design spec, applies go/no-go rules with an approval ladder (reuse, then extend, then new component), and verifies the result with browser screenshots against the spec. |
+| `ux-design` | automatic on UI work | Runs a preflight gate, records project decisions in `ux.config.json`, maps each UI change to catalog components in a Claude Design artifact, applies go/no-go rules with an approval ladder (reuse, then extend, then new component), and verifies the result with browser screenshots against the spec. |
 | `ux-audit` | `/ux-audit` only | Reviews the codebase with Haiku subagents, summarizes violations with Opus, and fixes approved findings with Haiku. |
 
 **Requirements.** The preflight stops UI work until these are in place, and offers to install what is missing:
