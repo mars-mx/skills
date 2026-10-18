@@ -52,13 +52,7 @@ If the file is missing, decide once with the user:
 
 1. Ask with AskUserQuestion: motion library or CSS keyframes. Name the trade-off: `motion` gives spring physics, layout and exit animations, and gestures at a bundle cost (about 34 KB for the full `motion` component, less with `LazyMotion`); CSS costs nothing at runtime and covers enter, hover, and press effects.
 2. Detect the catalog folders (the `ui` alias in `components.json`, plus folders with `*.stories.tsx`) and confirm them with the user.
-3. Write `ux.config.json`. Add this pointer to the project's `CLAUDE.md` or `AGENTS.md`, so sessions without this skill see the decision:
-
-   ```markdown
-   ## UI
-   UI follows the catalog-first rules of the ux-design skill. Project decisions (motion mechanism, catalog paths, approved exceptions) live in ux.config.json.
-   ```
-
+3. Write `ux.config.json`.
 4. Run the preflight again.
 
 The decision changes only when the user asks to change it. A change of mechanism is a migration: run `/ux-audit` afterwards.
