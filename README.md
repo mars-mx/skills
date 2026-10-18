@@ -32,6 +32,15 @@ Storybook is recommended; a missing Storybook only produces a warning. Node.js r
 
 The rules with go/no-go examples live in `skills/ux-design/references/rules.md`.
 
+### review-skills
+
+Agent-scale code review, following the Claude Code team's process.
+
+| Skill | Invocation | Purpose |
+| --- | --- | --- |
+| `review-setup` | `/review-setup` only | Sets up a repo for review: `REVIEW.md`, `CLAUDE.md` checks, PR template, risk tiers, and `CODEOWNERS`, plus a checklist of hosting-platform settings. |
+| `pre-pr-review` | automatic before a PR | Runs the checks, sets the risk tier, reviews the diff with at most 3 rounds, and writes the PR body. |
+
 ## Installation
 
 ### Claude Code

@@ -18,6 +18,16 @@
         "./skills/ux-design",
         "./skills/ux-audit"
       ]
+    },
+    {
+      "name": "review-skills",
+      "description": "Agent-scale code review: set up a repo's review process and run a capped pre-PR review loop",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/review-setup",
+        "./skills/pre-pr-review"
+      ]
     }
   ]
 }
