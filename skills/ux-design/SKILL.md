@@ -57,7 +57,21 @@ If the file is missing, decide once with the user:
 
 The decision changes only when the user asks to change it. A change of mechanism is a migration: run `/ux-audit` afterwards.
 
-## 3. Build from the catalog
+## 3. Design spec
+
+Every UI change starts from a **design spec**: the expected result that step 5 verifies against. A spec the user gave (mockup, screenshot, Figma frame, written description) is used as is.
+
+Without one, spawn a subagent to write it, so the catalog search stays out of your context. Give it the user's request, the catalog paths from `ux.config.json`, and the Storybook URL. It writes `.ux-spec/<feature>.md` (create the folder with `mkdir -p .ux-spec && echo '*' > .ux-spec/.gitignore`) containing:
+
+- every screen and region of the change, top to bottom
+- for each region: the catalog component, its variant and props, and its story (`*.stories.tsx` file and story name)
+- every component to add or extend, marked with its tier and the reason no existing component fits
+- the states to show: loading, empty, error, disabled, narrow width
+- a screenshot of each listed story from Storybook, saved next to the spec, when Storybook runs
+
+The subagent is done when every region maps to a story or to a marked addition. Show the user the spec. Their confirmation approves the listed additions for step 4; build only after it.
+
+## 4. Build from the catalog
 
 The shadcn skill's Critical Rules (styling, forms, composition, icons, base vs radix) apply to all code, catalog and feature code alike. This skill adds catalog governance on top; it does not repeat them.
 
@@ -67,7 +81,7 @@ For every piece of UI, walk the escalation ladder and take the first tier that f
 2. **extend**: a new variant or prop on a catalog component, or a wrapper around one. Theme changes count here too: a new or changed token in the global stylesheet, defined as the shadcn customization guide describes (`name` / `name-foreground` pairs, light and dark values).
 3. **new**: a new catalog component, only when tiers 1 and 2 cannot express it.
 
-Tiers 2 and 3, raw HTML primitives, and every other deviation from the rules need the user's explicit approval. Before asking, stop and state the gap: what is missing, where it is needed, which catalog or shadcn component comes closest, and which tier you propose. Until the user approves, build with the closest existing component.
+Tiers 2 and 3, raw HTML primitives, and every other deviation from the rules need the user's explicit approval. Before asking, stop and state the gap: what is missing, where it is needed, which catalog or shadcn component comes closest, and which tier you propose. Until the user approves, build with the closest existing component. Additions the user approved in the spec (step 3) need no second approval.
 
 Catalog components are project source. Pulling upstream changes into one (`shadcn add --overwrite`, preset `apply`) also changes the catalog: show the `--diff` first and overwrite only after approval.
 
@@ -76,9 +90,21 @@ After approval:
 - **extend** and **new** land in the catalog folders, with a story that shows every variant and state (default, hover, focus, disabled, loading, error, empty, reduced motion).
 - An approved deviation in feature code gets an entry in `ux.config.json` → `exceptions`.
 
-## 4. Done
+## 5. Verify
+
+Open the changed screens in the browser (Claude in Chrome or Playwright, whichever the session has) and screenshot every region and state from the spec, at desktop and narrow width. Compare each screenshot with the spec:
+
+- the component in each region is the one the spec names, in the named variant
+- it looks like its story screenshot or the user's mockup: spacing, alignment, color, typography
+- every listed state renders
+
+Fix each mismatch and screenshot again. The step is done when every region and state matches, or the remaining differences are listed for the user with their screenshots.
+
+## 6. Done
 
 The UI change is done when:
+
+- step 5 passed.
 
 - the scanner reports zero hits for the files you touched:
 
