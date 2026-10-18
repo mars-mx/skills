@@ -8,5 +8,16 @@
     "description": "Custom Claude Code Skills",
     "version": "0.0.1"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "ux-skills",
+      "description": "Catalog-first UX on shadcn/ui: preflight gate, project decisions in ux.config.json, go/no-go rules, and a /ux-audit with Haiku reviewers",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ux-design",
+        "./skills/ux-audit"
+      ]
+    }
+  ]
 }

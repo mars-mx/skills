@@ -4,7 +4,12 @@ A collection of custom skills for Claude Code.
 
 ## Skills
 
-_No skills yet._
+| Skill | Invocation | Purpose |
+| --- | --- | --- |
+| `ux-design` | automatic on UI work | Catalog-first UI on shadcn/ui. Gates on the shadcn MCP and skill, records project decisions in `ux.config.json`, and enforces go/no-go rules. |
+| `ux-audit` | `/ux-audit` only | Scans the codebase with Haiku reviewers, summarizes violations with Opus, and offers fixes. |
+
+Install with `/plugin install ux-skills@mars-skills`.
 
 ## Installation
 
