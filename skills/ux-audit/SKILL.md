@@ -36,7 +36,7 @@ List every UI source file (`*.tsx`, `*.jsx` outside `node_modules` and build out
 
 Spawn one Agent per batch in a single message, with `model: "haiku"`. Each prompt contains: the rules path, the `ux.config.json` path, the batch file, the candidates file, and the output path `.ux-audit/findings-<n>.jsonl`. Instruct each agent:
 
-> Read the rules file and `ux.config.json`. Then read every file in your batch completely. Judge every scanner candidate for your files: confirmed or false positive. Also report violations the scanner cannot see, mainly UX-C1 (a catalog component exists for hand-built UI) and UX-C5 (page-local components); list the catalog folders to know what exists. Skip anything in `exceptions`. Write one JSON object per confirmed violation to your output file:
+> Read the rules file and `ux.config.json`. Then read every file in your batch completely. Judge every scanner candidate for your files: confirmed or false positive. Also report violations the scanner cannot see, mainly UX-C1 (a catalog component exists for hand-built UI), UX-C5 (page-local components), and the structural part of UX-C6 (missing Dialog/Sheet/Drawer Title, items outside their Group, incomplete Card); list the catalog folders to know what exists. Skip anything in `exceptions`. Write one JSON object per confirmed violation to your output file:
 >
 > `{"file", "line", "rule", "severity", "tier", "evidence", "fix"}`
 >

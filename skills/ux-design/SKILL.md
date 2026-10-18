@@ -59,13 +59,17 @@ The decision changes only when the user asks to change it. A change of mechanism
 
 ## 3. Build from the catalog
 
+The shadcn skill's Critical Rules (styling, forms, composition, icons, base vs radix) apply to all code, catalog and feature code alike. This skill adds catalog governance on top; it does not repeat them.
+
 For every piece of UI, walk the escalation ladder and take the first tier that fits:
 
 1. **reuse**: an existing catalog component or variant. Search `*.stories.tsx` and the catalog folders, then the shadcn registry with `mcp__shadcn__search_items_in_registries`. A missing official shadcn component is added with `shadcn add` into the catalog, with a story.
-2. **extend**: a new variant or prop on a catalog component, or a wrapper around one.
+2. **extend**: a new variant or prop on a catalog component, or a wrapper around one. Theme changes count here too: a new or changed token in the global stylesheet, defined as the shadcn customization guide describes (`name` / `name-foreground` pairs, light and dark values).
 3. **new**: a new catalog component, only when tiers 1 and 2 cannot express it.
 
 Tiers 2 and 3, raw HTML primitives, and every other deviation from the rules need the user's explicit approval. Before asking, stop and state the gap: what is missing, where it is needed, which catalog or shadcn component comes closest, and which tier you propose. Until the user approves, build with the closest existing component.
+
+Catalog components are project source. Pulling upstream changes into one (`shadcn add --overwrite`, preset `apply`) also changes the catalog: show the `--diff` first and overwrite only after approval.
 
 After approval:
 

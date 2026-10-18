@@ -33,13 +33,14 @@ const files =
   filesFlag >= 0 ? args.slice(filesFlag + 1).map((f) => resolve(root, f)) : walk(root);
 
 const MOTION_IMPORT = /from\s+["'](motion(\/[\w-]+)?|framer-motion)["']/;
+const OVERLAY = /<(Dialog|Sheet|Drawer|AlertDialog|DropdownMenu|Popover|Tooltip|HoverCard)\w*\b/;
 const STYLE_CONTEXT = /className|class=|style=|cn\(|cva\(/;
 const PALETTE =
   /\b(bg|text|border|ring|fill|stroke|from|via|to|outline|shadow|decoration)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|black|white)(-\d{2,3})?\b/;
 
 // Line rules. scope "feature" runs outside the catalog, "all" runs everywhere.
 const LINE_RULES = [
-  { rule: "UX-C2", scope: "feature", test: (l) => /<(button|input|select|textarea|dialog|table|label)\b/.test(l) },
+  { rule: "UX-C2", scope: "feature", test: (l) => /<(button|input|select|textarea|dialog|table|label|hr)\b/.test(l) },
   {
     rule: "UX-C3",
     scope: "feature",
@@ -49,7 +50,15 @@ const LINE_RULES = [
     rule: "UX-T1",
     scope: "feature",
     test: (l) =>
-      STYLE_CONTEXT.test(l) && (/#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla|oklch)\(/.test(l) || PALETTE.test(l)),
+      STYLE_CONTEXT.test(l) && (/#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla|oklch)\(/.test(l) || PALETTE.test(l) || /\bdark:(bg|text|border)-/.test(l)),
+  },
+  {
+    rule: "UX-C6",
+    scope: "feature",
+    test: (l) =>
+      (STYLE_CONTEXT.test(l) && /\b(space-[xy]-\d|animate-pulse)\b/.test(l)) ||
+      /\b(isLoading|isPending)=/.test(l) ||
+      (OVERLAY.test(l) && /className=.*\bz-(\d+|\[)/.test(l)),
   },
   { rule: "UX-T2", scope: "feature", test: (l) => STYLE_CONTEXT.test(l) && /\b[a-z][\w-]*-\[[^\]]+\]/.test(l) },
   { rule: "UX-T3", scope: "feature", test: (l) => /style=\{\{/.test(l) },

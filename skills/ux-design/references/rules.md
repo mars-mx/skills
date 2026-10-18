@@ -17,6 +17,7 @@ Each rule names a **fix tier**, the escalation ladder from `SKILL.md`:
 | UX-C3 | Only the catalog imports primitive libraries | high | extend |
 | UX-C4 | Feature code positions catalog components; the catalog styles them | medium | extend |
 | UX-C5 | Reusable UI lives in the catalog, not inside a page file | medium | new |
+| UX-C6 | Code follows the shadcn skill's Critical Rules | medium | reuse |
 | UX-T1 | Colors come from theme tokens | medium | reuse |
 | UX-T2 | Spacing and sizing use the Tailwind scale | low | reuse |
 | UX-T3 | Styling goes through classes and variants | low | reuse |
@@ -42,7 +43,7 @@ Search Storybook stories and the catalog paths first, then the shadcn registry t
 
 ## UX-C2: No raw interactive HTML in feature code
 
-`button`, `input`, `select`, `textarea`, `dialog`, `table`, and `label` always come from the catalog. Layout elements (`div`, `section`, `main`, `ul`) are fine.
+`button`, `input`, `select`, `textarea`, `dialog`, `table`, and `label` always come from the catalog, and `hr` becomes `Separator`. Layout elements (`div`, `section`, `main`, `ul`) are fine.
 
 ```tsx
 // GO
@@ -95,6 +96,23 @@ function StatBox({ label, value }) {
 }
 ```
 
+## UX-C6: shadcn Critical Rules
+
+The shadcn skill's Critical Rules hold everywhere. The scanner flags the ones a pattern can find; review catches the rest (missing `DialogTitle`, items outside their Group, incomplete Card structure).
+
+```tsx
+// GO
+<div className="flex flex-col gap-4">
+<Button disabled={pending}>{pending && <Spinner data-icon="inline-start" />}Save</Button>
+<Skeleton className="h-4 w-32" />
+
+// NO-GO
+<div className="space-y-4">
+<Button isLoading={pending}>Save</Button>
+<DialogContent className="z-50">
+<div className="h-4 w-32 animate-pulse rounded bg-muted" />
+```
+
 ## UX-T1: Theme tokens for color
 
 Use the semantic tokens from the shadcn theme: `bg-background`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, and so on. The rule applies to feature code. Stock shadcn components ship a few literal colors (`text-white` on destructive variants, `bg-black/50` overlays); leave those as upstream wrote them.
@@ -105,6 +123,7 @@ Use the semantic tokens from the shadcn theme: `bg-background`, `text-muted-fore
 
 // NO-GO
 <p className="text-gray-500">...</p>
+<p className="text-foreground dark:text-zinc-100">...</p>
 <p style={{ color: "#6b7280" }}>...</p>
 ```
 
