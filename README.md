@@ -40,6 +40,15 @@ Agent-scale code review, following the Claude Code team's process.
 | --- | --- | --- |
 | `review-setup` | `/review-setup` only | Sets up a repo for review: `REVIEW.md`, `CLAUDE.md` checks, PR template, risk tiers, and `CODEOWNERS`, plus a checklist of hosting-platform settings. |
 | `pre-pr-review` | automatic before a PR | Runs the checks, sets the risk tier, reviews the diff with at most 3 rounds, and writes the PR body. |
+| `issue-to-pr` | `/issue-to-pr <issue>` only | Takes an issue to a mergeable PR: issue preflight with a Ponytail `ultra` plan review, a verification plan (Playwright, unit, E2E) with an environment baseline, Sonnet implementers under an Opus orchestrator, Ponytail review, tests and screenshots, `pre-pr-review`, and a PR watched until CI and the Claude reviewer are green. It messages you only at a gate, each one checked first by an independent Sonnet subagent. |
+
+**`issue-to-pr` requirements.** The preflight stops the run (gate G0) unless these are in place:
+
+- `gh`, authenticated, and Node.js for `scripts/pr-status.mjs`
+- the `pre-pr-review` skill (this plugin) and the Ponytail plugin (`ponytail:ponytail-review`)
+- an automated Claude reviewer on the repo: `anthropics/claude-code-action` or Code Review for Claude Code
+
+Gates, their verifier checklists, and example messages live in `skills/issue-to-pr/references/gates.md`.
 
 ## Installation
 
