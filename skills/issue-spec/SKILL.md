@@ -70,7 +70,7 @@ Done when a round raises nothing new or the round cap is reached.
 
 Skip this step when the change touches no UI or `ux-design` does not apply.
 
-Invoke the `ux-design` skill in **spec mode**: its steps 1 to 3 only. Its step 3 subagent creates the Design artifact and, with Storybook, the spec story `src/specs/<issue>-<slug>.spec.stories.tsx`. For a new idea, create the issue first without the `spec:ready` label (step 7), so the story can carry its number.
+Start Storybook with the repo's `storybook` script if it is not running. Invoke the `ux-design` skill in **spec mode**: its steps 1 to 3 only. Its step 3 subagent creates the Design artifact and, with Storybook, the spec story `src/specs/<issue>-<slug>.spec.stories.tsx`. For a new idea, create the issue first without the `spec:ready` label (step 7), so the story can carry its number.
 
 Give the user the artifact and the story URL in the running Storybook. Their confirmation is the design approval: it approves the screens, states, and the **Additions** the artifact lists. Record the approved additions with their tier in the spec. No further question follows; step 7 pushes.
 
@@ -99,12 +99,12 @@ On REJECTED, fix the spec (asking the user where the fix is a fork) and check ag
 
 ### 7. Publish
 
-1. **Issue.** A new idea: `gh issue create` with the spec as body. An existing issue: `gh issue edit --body-file`, with the original body kept in a `<details><summary>Original issue</summary>` block at the end.
+1. **Issue.** A new idea that step 5 did not already create: `gh issue create` with the spec as body. An issue step 5 created: `gh issue edit --body-file` with the spec. An existing issue: `gh issue edit --body-file`, with the original body kept in a `<details><summary>Original issue</summary>` block at the end.
 2. **Spec files**, only when step 5 wrote a story:
    - Check that the Storybook `stories` globs in `.storybook/main.*` cover `src/specs/`. If not, add `../src/specs/**/*.stories.@(ts|tsx)` to them.
    - Run typecheck, lint, and every story check the repo runs in CI (Storybook build, test runner or Vitest addon, visual tests). Fix the story until they are green. The default branch must stay green.
-   - Commit only the spec files, by path: `git commit -m "spec: #<issue> <title>" -- <paths>`. Then `git pull --rebase --autostash` and `git push origin <default>`.
-   - A rejected push fires the **push gate** below. The issue then does not get `spec:ready`.
+   - Commit only the spec files, by path: `git add -- <paths>`, then `git commit -m "spec: #<issue> <title>" -- <paths>`. Then `git pull --rebase --autostash` and `git push origin <default>`.
+   - A rejected push, or a rebase that stops on a conflict, fires the **push gate** below. The issue then does not get `spec:ready`.
 3. **Label.** `gh label create spec:ready --color 0E8A16 --description "Spec complete, ready for /issue-to-pr" --force`, then `gh issue edit <issue> --add-label spec:ready`.
 
 Done when the issue carries `spec:ready`, its body has the spec, and the spec story is on `origin/<default>` (`git log origin/<default> -1 -- <story path>` shows the commit).

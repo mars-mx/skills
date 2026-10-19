@@ -48,7 +48,7 @@ Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default
    - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Mark which slices touch disjoint files and can run in parallel.
 3. Run the **plan review**: a reviewer subagent with the plan-review brief, which applies the Ponytail `ultra` rules (question every part the need does not justify) and judges each assumption as long-term or workaround. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3. Update the plan after each round. Keep `ultra` mode inside the reviewer; your own session stays at its level.
 
-**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Decisions, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code, or a spec story path missing on the default branch, fires G1.
+**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Decisions, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code, or a spec story path missing on the default branch, fires G1.
 
 Done when every assumption is backed by evidence or decided with a recorded reason, and no G1 trigger holds. A G1 trigger that holds fires G1.
 
@@ -61,7 +61,7 @@ Write `RUN_DIR/verification.md` with three categories: **Playwright** (browser t
 
 With a spec, take the categories from its Verification section.
 
-Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec story, also start Storybook and screenshot every spec story in headless Chromium at each width in `ux.config.json` → `viewports` (missing: `[1440, 390]`), saved as `RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`. Any failure or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
+Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec story, also start Storybook and screenshot every spec story in headless Chromium at each width in `ux.config.json` → `viewports` (missing: `[1440, 390]`), saved as `RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`, with screen and state taken from the story name (`CheckoutDefault` → `checkout-default`). Any failure or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
 
 Done when every category has tests or a valid skip reason, and the baseline is green.
 

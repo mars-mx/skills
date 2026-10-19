@@ -69,7 +69,7 @@ Without one, spawn a `general-purpose` subagent to create it as a **Claude Desig
 
 With Storybook and an issue number, add to the instructions:
 
-> Also write the **spec story** `src/specs/<issue>-<slug>.spec.stories.tsx` with the title `Specs/#<issue> <title>`: one story per screen and state of the artifact, composed only of catalog components with static mock data, wrapped in the decorators of `.storybook/preview`. An addition renders as a placeholder box with a dashed border, labeled with the addition's name and tier. Take a screenshot of every story at each width in `viewports` and compare it with its artboard. You are done when every artboard has a story that matches it and the repo's typecheck and lint pass. Reply with the artifact URL and the story path.
+> Also write the **spec story** `src/specs/<issue>-<slug>.spec.stories.tsx` with the title `Specs/#<issue> <title>`: one story per screen and state of the artifact, named `<Screen><State>` after them (for example `CheckoutDefault`), composed only of catalog components with static mock data, wrapped in the decorators of `.storybook/preview`. An addition renders as a placeholder box with a dashed border, labeled with the addition's name and tier. Take a screenshot of every story at each width in `viewports` and compare it with its artboard. You are done when every artboard has a story that matches it and the repo's typecheck and lint pass. Reply with the artifact URL and the story path.
 
 Open the artifact for the user (`Artifact`, `action: "open"`), and the spec story in the running Storybook. Their confirmation approves the listed additions for step 4; build only after it.
 
