@@ -27,7 +27,11 @@ Invoking this skill is the user's request for a feature branch and a PR. It over
 
 Check, in this order:
 
-1. `gh auth status` passes and `gh issue view <issue>` returns the issue.
+1. `gh auth status` passes and `gh issue view <issue>` returns the issue. `gh` is at least v2.99.0, which adds `--attach` for the PR screenshots:
+
+   ```bash
+   gh --version | node -e 'const [a,b]=require("fs").readFileSync(0,"utf8").match(/(\d+)\.(\d+)/).slice(1).map(Number);process.exit(a>2||(a===2&&b>=99)?0:1)'
+   ```
 2. The worktree is clean. You are on the default branch (`gh repo view --json defaultBranchRef`), pulled to `origin`.
 3. The skills `pre-pr-review` and `ponytail:ponytail-review` are in your skill list.
 4. The repo has an automated Claude reviewer: a workflow in `.github/workflows/` using `anthropics/claude-code-action` or `claude-code-security-review`, or a bot review on one of the last 10 merged PRs. Note its check name and bot login as the **reviewer pattern** for step 8, and its `on:` triggers: whether it re-runs on `synchronize` or offers `workflow_dispatch`.
@@ -44,6 +48,8 @@ Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default
    - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Mark which slices touch disjoint files and can run in parallel.
 3. Run the **plan review**: a reviewer subagent with the plan-review brief, which applies the Ponytail `ultra` rules (question every part the need does not justify) and judges each assumption as long-term or workaround. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3. Update the plan after each round. Keep `ultra` mode inside the reviewer; your own session stays at its level.
 
+**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Decisions, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code, or a spec story path missing on the default branch, fires G1.
+
 Done when every assumption is backed by evidence or decided with a recorded reason, and no G1 trigger holds. A G1 trigger that holds fires G1.
 
 ### 3. Verification plan (gate G2)
@@ -53,7 +59,9 @@ Write `RUN_DIR/verification.md` with three categories: **Playwright** (browser t
 - the planned tests: file, what each asserts (mapped to an acceptance criterion), and the command that runs them, or
 - the skip reason. Valid reasons describe the change: "the change touches no UI", "the repo has no E2E harness and the change crosses no service boundary". The environment is never a valid reason: "it does not run locally right now" is a G2 trigger, not a skip.
 
-Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. Any failure or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
+With a spec, take the categories from its Verification section.
+
+Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec story, also start Storybook and screenshot every spec story in headless Chromium at each width in `ux.config.json` → `viewports` (missing: `[1440, 390]`), saved as `RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`. Any failure or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
 
 Done when every category has tests or a valid skip reason, and the baseline is green.
 
@@ -73,19 +81,24 @@ Done when a round returns no new Must fix or Should fix finding. After 3 rounds 
 
 1. Dispatch Sonnet test writers with the test brief, one per category in `verification.md`.
 2. Run every planned category plus typecheck, lint, and build. A red result goes back to you: diagnose the cause, then send a fix brief. Fix the code, not the test, unless the test contradicts an acceptance criterion.
-3. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at desktop and 390 px width. Save them to `RUN_DIR/screenshots/`. Compare them against the issue and, if the `ux-design` skill applies, against its spec.
+3. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at each width in `viewports`. Save them as `RUN_DIR/screenshots/<screen>-<state>-final-<width>.png`, with the same screen and state names as the spec screenshots. Compare each with its spec screenshot at the same width, desktop first; a placeholder region of the spec story is compared with its artboard in the Design artifact. Without a spec story, compare against the issue and, if the `ux-design` skill applies, against its spec.
+4. With a spec story: delete it in a commit (`spec: remove #<issue> spec story`). Its screenshots from the baseline stay the reference.
 
 Done when every command is green and the screenshots match. After 3 red rounds, G4 fires.
 
 ### 7. Pre-PR review (gate G5)
 
-Invoke `pre-pr-review`. If the skill is not available, G5 fires and the run stops. Its fixes go through Sonnet fix briefs like step 5. Keep its **risk tier** and its PR body, and add **Decisions** from the plan and the screenshot paths to the body.
+Invoke `pre-pr-review`. If the skill is not available, G5 fires and the run stops. Its fixes go through Sonnet fix briefs like step 5. Keep its **risk tier** and its PR body, and add **Decisions** from the plan to the body. For a UI change, add a **Screenshots** section: per screen and state, a table with a row per viewport (desktop first) and the columns Spec and Final. The cells reference the local files by their absolute path, as in `![Spec Desktop](/abs/RUN_DIR/screenshots/checkout-default-spec-1440.png)`; step 8 uploads them. Without a spec story, the table has only the Final column. Write the body to `RUN_DIR/pr-body.md`.
 
 Done when `pre-pr-review` reports "ready for PR". "Blocked" fires G5.
 
 ### 8. PR and watch (gate G6)
 
-1. Push the branch and open the PR with `gh pr create`, using the PR body from step 7 and `Closes #<issue>`.
+1. Push the branch and open the PR with `gh pr create --body-file RUN_DIR/pr-body.md`, with `Closes #<issue>` in the body. Upload the screenshots in the same command with one `--attach '<path>#<alt text>'` per file, using the exact path the body references: `gh` uploads the file and rewrites that reference to the uploaded asset. Mind the limits from `gh pr create --help`:
+   - At most 50 files per command. Attach the first 50; the rest goes up with `gh pr edit`.
+   - If some uploads fail, the PR is still created with the ones that succeeded; the command exits non-zero and still prints the PR URL. Take the PR number from that URL, not from the exit code.
+
+   For remaining or failed files: write the current body to a file (`gh pr view <pr> --json body -q .body > RUN_DIR/pr-body-current.md`), then run `gh pr edit <pr> --body-file RUN_DIR/pr-body-current.md --attach ...` with those files. Done when `gh pr view <pr> --json body` contains no path into `RUN_DIR`.
 2. Start the watcher in the background (`run_in_background`):
 
    ```bash
@@ -98,6 +111,7 @@ Done when `pre-pr-review` reports "ready for PR". "Blocked" fires G5.
    - `aiReview.items` and `unresolvedThreads` from the reviewer: triage each finding as in step 5, send fix briefs, then reply to each thread with the fix commit or the reason it does not apply, and resolve it.
      Resolve a thread with the GraphQL `resolveReviewThread` mutation and the thread `id` from the JSON.
    - `behindBy > 0`: merge the default branch into the branch. Resolve conflicts that have one clear answer; otherwise G6 fires.
+   - A fix that changes UI: take the final screenshots of the affected screens again, put their local paths back into the Screenshots cells of the current body, and upload them as in point 1.
    - Push, and start the watcher again. If the reviewer does not re-run on `synchronize`: trigger it with `gh workflow run <file> -f pr_number=<pr>` when it offers `workflow_dispatch`; otherwise add `--no-ai-wait`, so the watcher waits only for CI.
 
 Done when the watcher reports `ready: true` and the last review round raised nothing new. After 3 rounds, a timeout, or a conflict without one clear answer, G6 fires.

@@ -27,12 +27,13 @@ Evidence:
 
 ## G0 Preflight
 
-**Trigger:** `gh` is not authenticated or cannot read the issue; the worktree is dirty; `pre-pr-review` or `ponytail:ponytail-review` is missing from the skill list; the repo has no automated Claude reviewer.
+**Trigger:** `gh` is not authenticated, cannot read the issue, or is older than v2.99.0; the worktree is dirty; `pre-pr-review` or `ponytail:ponytail-review` is missing from the skill list; the repo has no automated Claude reviewer.
 
 **Checklist:**
 - [ ] The failing check was run in this session, and its output is in Evidence.
 - [ ] The failure is not fixable by the agent without the user (a login, an install the user must approve, the user's uncommitted work, a repo setting).
 - [ ] For a missing skill: the skill list was checked by its exact name, including the plugin prefix.
+- [ ] For an old `gh`: the `gh --version` output is in Evidence, with the update command (`brew upgrade gh` or the platform's equivalent).
 - [ ] For a missing reviewer: `.github/workflows/` was searched and the last 10 merged PRs were checked for bot reviews.
 
 **Example:**
@@ -52,6 +53,7 @@ Evidence:
 - An open question whose possible answers lead to materially different work, and that the issue, the code, the docs, and the git history cannot settle.
 - The only fix within the issue's scope is a workaround, and the long-term fix needs extensive changes: a schema migration, a public API change, a cross-module refactor, or a new dependency.
 - The issue contradicts the code, another issue, or a documented decision.
+- A `spec:ready` issue contradicts the current code, or its spec story is missing on the default branch.
 
 **Checklist:**
 - [ ] The question or conflict is stated in one sentence and appears in `plan.md`.
@@ -126,6 +128,7 @@ Evidence:
 - [ ] The same command was green in the baseline, so the failure comes from this change.
 - [ ] Each round's diagnosis and fix is listed.
 - [ ] No test was weakened, skipped, or deleted to get green.
+- [ ] For a screenshot mismatch: the spec and final screenshot paths at the same width are in Evidence, with the region that differs.
 
 **Example:**
 
@@ -191,6 +194,7 @@ Evidence:
 - [ ] Every category in `verification.md` ran green or carries a valid skip reason.
 - [ ] "Review nötig" matches the risk tier from `pre-pr-review`: `Low` no, `Medium` and `High` yes.
 - [ ] The PR body has Summary, Testing, Risk, How to revert, Review, and Decisions.
+- [ ] For a UI change: the PR body has a Screenshots section with a Spec and a Final image per screen, state, and viewport (only Final without a spec story), and no path into `RUN_DIR` is left in it.
 
 **Example:**
 
@@ -201,5 +205,5 @@ Evidence:
 - pr-status.mjs 418 → ready: true, 14 Checks grün, behindBy 0, 0 offene Threads
 - Playwright 6/6, Unit 23/23 grün; E2E übersprungen: keine Service-Grenze betroffen
 - Implementation Review: 2 Runden, 5 Findings gefixt; Claude Review: 1 Runde, 2 Findings gefixt
-- Screenshots: /tmp/issue-to-pr/web-412/screenshots/
+- Screenshots im PR-Body: 3 Screens × 2 Viewports, je Spec und Final
 ```

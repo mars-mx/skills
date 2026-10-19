@@ -17,6 +17,7 @@ Files to read for context, not to change:
 
 Follow the existing pattern in <path:lines>. Use <existing helper or component> for <purpose>.
 Decisions already made: <decisions from plan.md that touch this slice>
+Approved UI additions: <additions from the spec with their tier, or none>. These are approved by the user; build them in the catalog with a story, without asking.
 Out of scope: every file not listed above. If the slice needs a change outside its files, stop and report it instead of making it.
 
 Done when:

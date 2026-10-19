@@ -21,12 +21,13 @@
     },
     {
       "name": "review-skills",
-      "description": "Agent-scale code review: set up a repo's review process, run a capped pre-PR review loop, and take an issue end to end to a mergeable PR",
+      "description": "Agent-scale code review: set up a repo's review process, run a capped pre-PR review loop, spec an issue with the user, and take it end to end to a mergeable PR",
       "source": "./",
       "strict": false,
       "skills": [
         "./skills/review-setup",
         "./skills/pre-pr-review",
+        "./skills/issue-spec",
         "./skills/issue-to-pr"
       ]
     }
