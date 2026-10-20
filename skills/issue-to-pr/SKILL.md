@@ -36,7 +36,7 @@ Check, in this order:
 3. The skills `pre-pr-review` and `ponytail:ponytail-review` are in your skill list.
 4. The repo has an automated Claude reviewer: a workflow in `.github/workflows/` using `anthropics/claude-code-action` or `claude-code-security-review`, or a bot review on one of the last 10 merged PRs. Note its check name and bot login as the **reviewer pattern** for step 8, and its `on:` triggers: whether it re-runs on `synchronize` or offers `workflow_dispatch`.
 
-Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default branch.
+Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default branch and assign the issue to the user, so the issue list shows what is in progress: `gh issue edit <issue> --add-assignee @me`.
 
 ### 2. Issue preflight (gate G1)
 
