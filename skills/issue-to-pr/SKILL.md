@@ -34,7 +34,7 @@ Check, in this order:
    ```
 2. The worktree is clean. You are on the default branch (`gh repo view --json defaultBranchRef`), pulled to `origin`.
 3. The skills `pre-pr-review` and `ponytail:ponytail-review` are in your skill list.
-4. The repo has an automated Claude reviewer: a workflow in `.github/workflows/` using `anthropics/claude-code-action` or `claude-code-security-review`, or a bot review on one of the last 10 merged PRs. Note its check name and bot login as the **reviewer pattern** for step 8, and its `on:` triggers: whether it re-runs on `synchronize` or offers `workflow_dispatch`.
+4. The repo has an automated Claude reviewer: a workflow in `.github/workflows/` using `anthropics/claude-code-action` or `claude-code-security-review`, or a bot review on one of the last 10 merged PRs. Note its check-run name and bot login: if neither contains "claude", step 8 needs a `--reviewer` regex that matches one of them, never the workflow name. Also note its `on:` triggers: whether it re-runs on `synchronize` or offers `workflow_dispatch`.
 
 Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default branch and assign the issue to the user, so the issue list shows what is in progress: `gh issue edit <issue> --add-assignee @me`.
 
@@ -102,10 +102,10 @@ Done when `pre-pr-review` reports "ready for PR". "Blocked" fires G5.
 2. Start the watcher in the background (`run_in_background`):
 
    ```bash
-   node ${CLAUDE_SKILL_DIR}/scripts/pr-status.mjs <pr> --watch --reviewer '<reviewer pattern>'
+   node ${CLAUDE_SKILL_DIR}/scripts/pr-status.mjs <pr> --watch
    ```
 
-   It exits when every check has finished and the Claude reviewer has run on the head commit, or after 60 minutes (exit 2).
+   It exits when every check has finished and the Claude reviewer has run on the head commit, or after 60 minutes (exit 2). Pass `--reviewer <regex>` only when the AI reviewer is not named "claude"; the regex must match its check-run name or its author login, never the workflow name. If it matches neither once all checks have finished, the watcher exits 1 with the checks and authors it saw.
 3. When it exits, read its JSON:
    - `checks.failing`: read the failed logs (`gh run view --log-failed`), diagnose, send a fix brief.
    - `aiReview.items` and `unresolvedThreads` from the reviewer: triage each finding as in step 5, send fix briefs, then reply to each thread with the fix commit or the reason it does not apply, and resolve it.
@@ -118,4 +118,4 @@ Done when the watcher reports `ready: true` and the last review round raised not
 
 ### 9. Ready (gate G7)
 
-Run `pr-status.mjs <pr>` once more without `--watch` and confirm `ready: true`. `awaitingApproval: true` means branch protection waits only for a human approval; the PR is then mergeable in the UI right after the user approves. Decide whether the user must review, from the step 7 risk tier: `Low` needs no review, `Medium` and `High` do. Either way, merging stays with the user. Run the gate check for G7 and send the ready message from `references/gates.md`.
+Run `pr-status.mjs <pr>` once more without `--watch`, with the same `--reviewer` if step 8 used one, and confirm `ready: true`. `awaitingApproval: true` means branch protection waits only for a human approval; the PR is then mergeable in the UI right after the user approves. Decide whether the user must review, from the step 7 risk tier: `Low` needs no review, `Medium` and `High` do. Either way, merging stays with the user. Run the gate check for G7 and send the ready message from `references/gates.md`.

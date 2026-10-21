@@ -4,8 +4,10 @@
 //
 // Usage: node pr-status.mjs <pr> [--watch] [--reviewer <regex>] [--no-ai-wait] [--timeout-min 60] [--interval 30]
 // --no-ai-wait: the reviewer does not re-run on push, so a missing review on the head commit does not block.
-// Exit: 0 state printed, 2 watch timed out, 1 error.
+// Exit: 0 state printed, 2 watch timed out, 1 error (also in --watch when, with all checks
+// finished, the reviewer pattern matches no check name and no review or comment author on the PR).
 import { execFileSync } from "node:child_process";
+import { unmatchedReviewer } from "./reviewer-match.mjs";
 
 const args = process.argv.slice(2);
 const pr = args.find((a) => /^\d+$/.test(a));
@@ -40,9 +42,11 @@ function state() {
   const headDate = p.commits.at(-1)?.committedDate ?? "";
 
   const checks = { pending: [], failing: [], passed: 0 };
+  const labels = [];
   let reviewerCheckDone = false;
   for (const c of p.statusCheckRollup ?? []) {
     const label = c.name ?? c.context;
+    labels.push(label ?? "");
     const done = c.__typename === "CheckRun" ? c.status === "COMPLETED" : !["PENDING", "EXPECTED"].includes(c.state);
     const result = c.conclusion ?? c.state;
     if (!done) checks.pending.push(label);
@@ -85,16 +89,28 @@ function state() {
     behindBy === 0 &&
     threads.length === 0;
 
-  return {
+  const authors = [...p.reviews, ...p.comments].map((x) => x.author?.login ?? "");
+  const unmatched = watch
+    ? unmatchedReviewer({ reviewer, aiWait, pending: checks.pending, mergeStateStatus: p.mergeStateStatus, labels, authors, pr })
+    : null;
+  // Not enumerable, so the printed JSON stays the same.
+  return Object.defineProperty({
     pr: p.number, url: p.url, head: p.headRefOid, defaultBranch, isDraft: p.isDraft,
     mergeable: p.mergeable, mergeStateStatus: p.mergeStateStatus, reviewDecision: p.reviewDecision, awaitingApproval, behindBy,
     checks, aiReview, unresolvedThreads: threads, ready,
-  };
+  }, "unmatched", { value: unmatched });
 }
 
 try {
   const start = Date.now();
   let s = state();
+  const failIfUnmatched = () => {
+    if (s.unmatched) {
+      console.error(s.unmatched);
+      process.exit(1);
+    }
+  };
+  failIfUnmatched();
   // GitHub computes mergeStateStatus lazily; UNKNOWN means "ask again".
   while (watch && (s.checks.pending.length > 0 || !s.aiReview.done || s.mergeStateStatus === "UNKNOWN")) {
     if (Date.now() - start > timeoutMs) {
@@ -103,6 +119,7 @@ try {
     }
     await new Promise((r) => setTimeout(r, intervalMs));
     s = state();
+    failIfUnmatched();
   }
   console.log(JSON.stringify(s, null, 2));
 } catch (e) {
