@@ -30,6 +30,15 @@
         "./skills/issue-spec",
         "./skills/issue-to-pr"
       ]
+    },
+    {
+      "name": "deps-skills",
+      "description": "Weekly dependency upgrades for npm and Python: OSV CVEs and CWEs, cooldown-based targets, release-note diffs, severity with wait times, breaking-change search with Haiku, and an automated upgrade PR",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/dep-upgrades"
+      ]
     }
   ]
 }
