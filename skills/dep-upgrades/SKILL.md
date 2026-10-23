@@ -41,7 +41,7 @@ Invoking this skill is the user's request for a branch and a PR. It overrides th
 ### 1. Preflight
 
 1. `gh auth status` passes, the worktree is clean, and you are on the default branch pulled to `origin`.
-2. Look for an open PR from an earlier run: `gh pr list --label deps:automated --state open --json number,headRefName`. If there is one, check out its branch and merge the default branch into it; this run updates that PR. Otherwise create `deps/upgrades-<YYYY-MM-DD>`.
+2. Look for an open PR from an earlier run: `gh pr list --label deps:automated --state open --json number,headRefName`. If there is one, reset its branch to the default branch (`git checkout -B <headRefName> origin/<default>`): each run rebuilds the bot branch from scratch, so the PR body always describes the full set of upgrades, and step 8 force-pushes it. Otherwise create `deps/upgrades-<YYYY-MM-DD>`.
 
 Set `RUN_DIR=${TMPDIR:-/tmp}/dep-upgrades/<repo>/`. Nothing from it is committed.
 
@@ -53,7 +53,9 @@ node ${CLAUDE_SKILL_DIR}/scripts/scan.mjs . --out "$RUN_DIR" [--cooldown <days>]
 
 Read stdout only. It lists each package with severity, `current -> target`, `in-major` (newest cooled release in the current major), latest, bump, releases and days behind, the wait time, up to 5 vulns (ID, CVE, severity, CWE, fixed version), breaking signals, and the path to its release notes. `transitive:` lists vulnerable locked packages that are not direct dependencies. `RUN_DIR/report.json` holds the full data for subagents.
 
-If no package has a severity and no supply-chain line appears, report "all current" and stop. No PR.
+A `-> REMOVE` line is a malicious package with no safe version. A `not-checked:` line lists packages the scan could not resolve to a version (unsupported lockfile, no pin), so they got no vuln check.
+
+If no package has a severity, and no `supply-chain:` or `not-checked:` line appears, report "all current" and stop. No PR. With `not-checked:` lines and nothing else, report what was not checked and stop.
 
 ### 3. Research (parallel)
 
@@ -72,6 +74,7 @@ Then decide per package, yourself:
 - **upgrade in-major** to `in-major`: breaking-used, and `in-major` fixes every vuln (or there is none). The major upgrade goes to step 5.
 - **breaking-used**: needs code changes. Goes to step 5.
 - **hold**: no cooled target, or you have a recorded reason.
+- **remove**: the scan says `REMOVE`. Never upgrade or reinstall it. Always ask the user, also in `--auto` mode through **Needs decision** and `PushNotification`, and say that its install scripts may already have run in CI and on dev machines, so secrets those machines hold may be compromised.
 
 ### 5. Breaking gate
 
@@ -88,7 +91,7 @@ For per-package PRs, run steps 6 to 8 per breaking package on its own branch `de
 
 ### 6. Apply
 
-Run the `command` from `report.json` for each package (or `commandInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. A transitive fix that needs a parent's major bump goes to the parent's decision.
+Run the `commands` from `report.json` for each package, one per manifest that declares it (`commandsInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. A transitive fix that needs a parent's major bump goes to the parent's decision.
 
 Dispatch migration agents now, if the user chose them. Commit per package: `deps: <name> <from> -> <to>`.
 
@@ -100,7 +103,7 @@ Install, then run the repo's typecheck, lint, tests, and build (from `package.js
 
 ### 8. PR
 
-Push. Create the label once if it is missing: `gh label create deps:automated --color 0366d6`.
+Push; a reused branch needs `git push --force-with-lease`. Create the label once if it is missing: `gh label create deps:automated --color 0366d6`.
 
 Title: `Automated package upgrades <YYYY-MM-DD> [<highest severity>]`. A per-package PR is `Automated package upgrade: <name> <from> -> <to> (breaking)`. If step 1 found an open PR, update its title and body with `gh pr edit` instead.
 

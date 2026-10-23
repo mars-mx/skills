@@ -107,3 +107,13 @@ test("pyproject and uv.lock parsing", () => {
   const lock = parseLock(`version = 1\n\n[[package]]\nname = "Requests"\nversion = "2.31.0"\nsource = { registry = "https://pypi.org/simple" }\n\n[[package]]\nname = "x"\nversion = "0.1.0"\nsource = { editable = "." }\n`);
   assert.deepEqual([...lock], [["requests", "2.31.0"]]);
 });
+
+test("malware without a fix removes the package; hijacked versions are skipped", () => {
+  const whole = chooseTarget({ current: "1.0.0", versions, vulns: [{ malicious: true, fixed: null, versions: [] }], cooldownDays: 14, now: NOW });
+  assert.equal(whole.remove, true);
+  assert.equal(whole.target, null);
+  assert.equal(whole.inMajor, null);
+  const hijacked = chooseTarget({ current: "1.0.0", versions, vulns: [{ malicious: true, fixed: null, versions: ["2.0.0"] }], cooldownDays: 14, now: NOW });
+  assert.equal(hijacked.remove, false);
+  assert.equal(hijacked.target, "1.1.0");
+});

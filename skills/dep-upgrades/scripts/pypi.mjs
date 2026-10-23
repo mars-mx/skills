@@ -148,5 +148,5 @@ export function upgradeCommand(dep, version, proj) {
   if (proj.lockStatus.includes("uv.lock")) return `uv add "${dep.name}==${version}"`;
   if (proj.lockStatus.includes("poetry.lock")) return `poetry add "${dep.name}==${version}"`;
   if (proj.lockStatus.includes("pdm.lock")) return `pdm add "${dep.name}==${version}"`;
-  return `set ${dep.name}==${version} in ${proj.manifest}`;
+  return `set ${dep.name}==${version} in ${basename(proj.manifest)}`;
 }

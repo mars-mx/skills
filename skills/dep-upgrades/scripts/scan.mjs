@@ -20,8 +20,9 @@ const flag = (name, fallback) => {
 };
 const cooldown = Number(flag("--cooldown", 14));
 const onlyEco = flag("--eco", null);
+const outFlag = flag("--out", null);
 const root = resolve(args[0] ?? process.cwd());
-const out = resolve(flag("--out", join(process.env.TMPDIR ?? tmpdir(), "dep-upgrades", basename(root))));
+const out = resolve(outFlag ?? join(process.env.TMPDIR ?? tmpdir(), "dep-upgrades", basename(root)));
 const managers = [npm, pypi].filter((m) => !onlyEco || m.ecosystem.toLowerCase() === onlyEco.toLowerCase());
 
 const projects = managers.flatMap((m) => m.discover(root).map((p) => ({ ...p, manager: m })));
@@ -58,6 +59,7 @@ const packages = await pool(directs, 6, async ({ ecosystem, dep, meta, projects:
   const base = { ecosystem, name: dep.name, current: dep.version, kind: dep.kind, pinned: dep.pinned, spec: dep.spec, manifests: projs.map((p) => p.manifest) };
   const vulns = osv.get(`${ecosystem}|${dep.name}|${dep.version}`) ?? [];
   if (!meta || meta.error) return { ...base, error: meta?.error ?? "not found in registry", vulns, ...severityOf({ vulns }) };
+  const commandsFor = (version) => projs.map((p) => `cd ${p.dir} && ${manager.upgradeCommand(dep, version, p)}`);
   const own = meta.versions.find((v) => compareVersions(v.version, dep.version) === 0);
   const t = chooseTarget({ current: dep.version, versions: meta.versions, vulns, cooldownDays: cooldown });
   const sev = severityOf({ vulns, deprecated: own?.deprecated, yanked: own?.yanked, ...t });
@@ -65,13 +67,14 @@ const packages = await pool(directs, 6, async ({ ecosystem, dep, meta, projects:
     ...base, ...t, ...sev, vulns, repo: meta.repo,
     deprecated: !!own?.deprecated, yanked: !!own?.yanked,
     bump: t.target ? bumpKind(dep.version, t.target) : "none",
-    command: t.target ? manager.upgradeCommand(dep, t.target, projs[0]) : null,
-    commandInMajor: t.inMajor && t.inMajor !== t.target ? manager.upgradeCommand(dep, t.inMajor, projs[0]) : null,
+    commands: t.target ? commandsFor(t.target) : [],
+    commandsInMajor: t.inMajor && t.inMajor !== t.target ? commandsFor(t.inMajor) : [],
   };
   if (!t.target) return pkg;
   const notes = await releaseNotes({ repo: meta.repo, name: dep.name, from: dep.version, to: t.target }).catch(() => ({ source: null, entries: [] }));
   const flags = flagLines(notes.entries);
   pkg.notesSource = notes.source;
+  pkg.notesError = notes.error ?? null;
   pkg.breaking = { major: pkg.bump === "major", lines: flags.breaking.length };
   pkg.securityLines = flags.security.length;
   if (notes.entries.length) {
@@ -85,14 +88,13 @@ const packages = await pool(directs, 6, async ({ ecosystem, dep, meta, projects:
 
 // ---------- transitive vulnerabilities ----------
 
-const directNames = new Set(directs.map((e) => `${e.ecosystem}|${e.dep.name}`));
+
 const transitive = new Map();
 for (const p of projects) {
   for (const l of p.locked) {
-    if (directNames.has(`${p.ecosystem}|${l.name}`)) continue;
-    const vulns = osv.get(`${p.ecosystem}|${l.name}|${l.version}`);
-    if (!vulns) continue;
     const key = `${p.ecosystem}|${l.name}|${l.version}`;
+    const vulns = osv.get(key);
+    if (!vulns || directKeys.has(key)) continue;
     if (!transitive.has(key)) transitive.set(key, { ecosystem: p.ecosystem, name: l.name, current: l.version, vulns, ...severityOf({ vulns }), lockfiles: [] });
     transitive.get(key).lockfiles.push(p.lockfile);
   }
@@ -139,13 +141,13 @@ for (const h of hygiene) {
 const actionable = packages.filter((p) => p.severity !== "none" || p.error).sort(bySeverity);
 for (const p of actionable) {
   if (p.error) { lines.push(`[${p.severity}] ${p.ecosystem} ${p.name} ${p.current}: ERROR ${p.error}`); lines.push(...vulnLines(p.vulns)); continue; }
-  const to = p.target ? `-> ${p.target}${p.fresh ? " (fresh, inside cooldown)" : ""}` : "-> hold (no cooled release)";
+  const to = p.remove ? "-> REMOVE (malicious, no safe version)" : p.target ? `-> ${p.target}${p.fresh ? " (fresh, inside cooldown)" : ""}` : "-> hold (no cooled release)";
   const inMajor = p.inMajor && p.inMajor !== p.target ? ` in-major ${p.inMajor}` : "";
   lines.push(`[${p.severity}] ${p.ecosystem} ${p.name} ${p.current} ${to}${inMajor} latest ${p.latest} | ${p.bump}, ${p.releasesBehind} rel, ${p.lagDays}d behind | wait ${p.wait} | ${p.reasons.join("; ")}`);
   lines.push(...vulnLines(p.vulns));
   if (p.breaking && (p.breaking.major || p.breaking.lines)) lines.push(`  breaking: ${[p.breaking.major && "major bump", p.breaking.lines && `${p.breaking.lines} note lines`].filter(Boolean).join(", ")}`);
   if (p.notes) lines.push(`  notes ${p.notes}${p.securityLines ? ` (${p.securityLines} security lines)` : ""}`);
-  else if (p.target) lines.push(`  notes: none found${p.repo ? ` in ${p.repo}` : " (no GitHub repo)"}`);
+  else if (p.target) lines.push(`  notes: none found${p.repo ? ` in ${p.repo}` : " (no GitHub repo)"}${p.notesError ? ` (${p.notesError})` : ""}`);
 }
 const current = packages.filter((p) => p.severity === "none" && !p.error).length;
 if (current) lines.push(`${current} packages current`);
@@ -158,6 +160,6 @@ if (transitive.size) {
 }
 for (const h of hygiene) {
   if (h.lockStatus === "missing" && h.unpinned.length) lines.push(`supply-chain: ${h.manifest} has no lockfile and ${h.unpinned.length} unpinned: ${h.unpinned.join(", ")}`);
-  else if (h.unresolved.length) lines.push(`unresolved in ${h.manifest}: ${h.unresolved.join(", ")}`);
+  if (h.unresolved.length) lines.push(`not-checked: ${h.manifest} (${h.lockStatus}) ${h.unresolved.length} packages without a resolved version: ${h.unresolved.join(", ")}`);
 }
 console.log(lines.join("\n"));

@@ -156,6 +156,8 @@ export function summarizeVulns(records, pkg) {
       cwe: [...new Set(recs.flatMap((r) => r.database_specific?.cwe_ids ?? []))].sort(),
       cvss: recs.flatMap((r) => r.severity ?? []).find((s) => s.type?.startsWith("CVSS"))?.score ?? null,
       fixed: minFixed(recs, pkg),
+      // Malware entries list hijacked versions; none listed and no fix means the whole package.
+      ...(malicious ? { versions: affectedVersions(recs, pkg) } : {}),
       summary: (main.summary ?? main.details ?? "").split("\n")[0].trim().slice(0, 140),
     };
   });
@@ -163,6 +165,12 @@ export function summarizeVulns(records, pkg) {
   function rank(r) {
     return (r.id.startsWith("MAL-") ? 4 : 0) + (r.id.startsWith("GHSA-") ? 2 : 0) + (r.database_specific?.severity ? 1 : 0);
   }
+}
+
+function affectedVersions(records, pkg) {
+  return [...new Set(records.flatMap((r) => (r.affected ?? [])
+    .filter((a) => normalizeName(a.package?.name, pkg.ecosystem) === pkg.name)
+    .flatMap((a) => a.versions ?? [])))];
 }
 
 // Smallest "fixed" event above the current version for this package.
@@ -183,7 +191,10 @@ export function normalizeName(name, ecosystem) {
 
 // versions: [{version, time: ISO string, deprecated?: bool, yanked?: bool}]
 export function chooseTarget({ current, versions, vulns, cooldownDays, now = Date.now() }) {
-  const usable = versions.filter((v) => isStable(v.version) && !v.deprecated && !v.yanked).sort((a, b) => compareVersions(a.version, b.version));
+  const hijacked = new Set(vulns.filter((v) => v.malicious).flatMap((v) => v.versions ?? []));
+  const remove = vulns.some((v) => v.malicious && !v.fixed && !v.versions?.length);
+  const usable = versions.filter((v) => isStable(v.version) && !v.deprecated && !v.yanked && !hijacked.has(v.version))
+    .sort((a, b) => compareVersions(a.version, b.version));
   const latest = usable.at(-1)?.version ?? null;
   const cooled = usable.filter((v) => !v.time || now - Date.parse(v.time) >= cooldownDays * DAY);
   const newer = (v) => compareVersions(v.version, current) > 0;
@@ -208,7 +219,8 @@ export function chooseTarget({ current, versions, vulns, cooldownDays, now = Dat
   const lagDays = time(current) && time(latest) && compareVersions(latest, current) > 0
     ? Math.round((Date.parse(time(latest)) - Date.parse(time(current))) / DAY) : 0;
   const majorsBehind = new Set(usable.filter(newer).map((v) => majorKey(v.version)).filter((k) => k !== majorKey(current))).size;
-  return { latest, target, inMajor, required, fresh, releasesBehind: released, lagDays, majorsBehind };
+  if (remove) return { latest, target: null, inMajor: null, required: null, fresh: false, remove, releasesBehind: released, lagDays, majorsBehind };
+  return { latest, target, inMajor, required, fresh, remove, releasesBehind: released, lagDays, majorsBehind };
 }
 
 export const WAIT = { critical: "now (24h)", high: "7 days", medium: "30 days", low: "next cycle (90 days)", none: "-" };
@@ -290,10 +302,12 @@ const CHANGELOG_FILES = ["CHANGELOG.md", "CHANGES.md", "HISTORY.md", "CHANGELOG.
 // Release notes for versions in (from, to]. Returns {source, entries: [{version, body}]}.
 export async function releaseNotes({ repo, name, from, to }) {
   if (!repo || !to) return { source: null, entries: [] };
-  const inRange = (v) => v && compareVersions(v, from) > 0 && compareVersions(v, to) <= 0;
-  const releases = await getJSON(`https://api.github.com/repos/${repo}/releases?per_page=100`, { headers: githubHeaders() }).catch(() => null);
+  const inRange = (v) => v && isStable(v) && compareVersions(v, from) > 0 && compareVersions(v, to) <= 0;
+  let error = null;
+  const releases = await getJSON(`https://api.github.com/repos/${repo}/releases?per_page=100`, { headers: githubHeaders() })
+    .catch((err) => { error = err.message.replace(/^GET \S+: /, "github "); return null; });
   const entries = (releases ?? [])
-    .filter((r) => !r.draft)
+    .filter((r) => !r.draft && !r.prerelease)
     .map((r) => ({ version: tagVersion(r.tag_name, name), body: (r.body ?? "").trim() }))
     .filter((e) => inRange(e.version) && e.body);
   if (entries.length) return { source: `github releases ${repo}`, entries: entries.sort((a, b) => compareVersions(a.version, b.version)) };
@@ -303,7 +317,7 @@ export async function releaseNotes({ repo, name, from, to }) {
     const found = changelogSections(text).filter((s) => inRange(s.version) && s.body);
     if (found.length) return { source: `${repo}/${file}`, entries: found.sort((a, b) => compareVersions(a.version, b.version)) };
   }
-  return { source: null, entries: [] };
+  return { source: null, entries: [], error };
 }
 
 export function flagLines(entries) {
