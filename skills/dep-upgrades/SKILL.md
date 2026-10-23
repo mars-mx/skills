@@ -91,7 +91,7 @@ For per-package PRs, run steps 6 to 8 per breaking package on its own branch `de
 
 ### 6. Apply
 
-Run the `commands` from `report.json` for each package, one per manifest that declares it (`commandsInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. A transitive fix that needs a parent's major bump goes to the parent's decision.
+Run the `commands` from `report.json` for each package, one per manifest that declares it (`commandsInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. The `commands` already use the repo's package manager (`npm`, `yarn`, or `pnpm`, from the lockfile). For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `yarn up -R <name>` for Yarn Berry, `yarn upgrade <name>` for Yarn 1, `pnpm update --depth Infinity <name>` for pnpm; if the range of the parent does not allow the fix, pin it with `resolutions` (Yarn) or `pnpm.overrides` (pnpm) in `package.json`, and name the override in the PR; `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. A transitive fix that needs a parent's major bump goes to the parent's decision.
 
 Dispatch migration agents now, if the user chose them. Commit per package: `deps: <name> <from> -> <to>`.
 

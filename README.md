@@ -59,11 +59,11 @@ Dependency upgrades with a security focus, built to run once a week per repo.
 
 | Skill | Invocation | Purpose |
 | --- | --- | --- |
-| `dep-upgrades` | `/dep-upgrades [--auto] [--cooldown <days>]` only | Scans npm (`package.json` with `package-lock.json` v1-v3) and Python (`requirements*.txt`, `pyproject.toml` with `uv.lock`, `poetry.lock`, or `pdm.lock`) for vulnerabilities, CWEs, malware, and outdated packages. Picks a target per package that stays a cooldown behind the newest release unless a security fix needs it, rates severity with a wait time, summarizes the release notes with Haiku, checks breaking changes against the code with Haiku, assesses attack vectors for high and critical vulns with Sonnet, and opens or updates one PR labeled `deps:automated`. Asks before breaking-change PRs; `--auto` asks nothing and lists them as open decisions. |
+| `dep-upgrades` | `/dep-upgrades [--auto] [--cooldown <days>]` only | Scans npm (`package.json` with `package-lock.json` v1-v3, `yarn.lock` v1 or Berry, or `pnpm-lock.yaml` v5-v9) and Python (`requirements*.txt`, `pyproject.toml` with `uv.lock`, `poetry.lock`, or `pdm.lock`) for vulnerabilities, CWEs, malware, and outdated packages. Picks a target per package that stays a cooldown behind the newest release unless a security fix needs it, rates severity with a wait time, summarizes the release notes with Haiku, checks breaking changes against the code with Haiku, assesses attack vectors for high and critical vulns with Sonnet, and opens or updates one PR labeled `deps:automated`. Asks before breaking-change PRs; `--auto` asks nothing and lists them as open decisions. |
 
 **Requirements.** Node.js 20 or later, `gh` authenticated (also raises the GitHub API limit for release notes), and the repo's package manager for applying upgrades. No API keys: data comes from OSV, the npm registry, PyPI, and GitHub.
 
-**Script** `skills/dep-upgrades/scripts/scan.mjs [root] [--cooldown <days>] [--out <dir>] [--eco npm|PyPI]` prints a compact report and writes `report.json` plus release notes per package to `--out`. `yarn.lock` and `pnpm-lock.yaml` are reported as unsupported, their versions stay unresolved.
+**Script** `skills/dep-upgrades/scripts/scan.mjs [root] [--cooldown <days>] [--out <dir>] [--eco npm|PyPI]` prints a compact report and writes `report.json` plus release notes per package to `--out`. Bun lockfiles are reported as `not-checked`.
 
 To run it weekly, use `/schedule` with the prompt `/dep-upgrades --auto`.
 

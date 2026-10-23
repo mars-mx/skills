@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { bumpKind, changelogSections, chooseTarget, compareVersions, severityOf, summarizeVulns, tagVersion } from "./lib.mjs";
-import { lockedPackages, lockedVersion } from "./npm.mjs";
+import { lockedPackages, lockedVersion, parsePnpmLock, parseYarnLock, upgradeCommand } from "./npm.mjs";
 import { parseLock, parsePyproject, parseRequirement } from "./pypi.mjs";
 
 const NOW = Date.parse("2026-10-23T00:00:00Z");
@@ -116,4 +116,34 @@ test("malware without a fix removes the package; hijacked versions are skipped",
   const hijacked = chooseTarget({ current: "1.0.0", versions, vulns: [{ malicious: true, fixed: null, versions: ["2.0.0"] }], cooldownDays: 14, now: NOW });
   assert.equal(hijacked.remove, false);
   assert.equal(hijacked.target, "1.1.0");
+});
+
+test("yarn.lock v1 and Berry resolve descriptors and list packages", () => {
+  const v1 = parseYarnLock(`# yarn lockfile v1\n\n\n"@babel/core@^7.0.0", "@babel/core@^7.1.0":\n  version "7.1.2"\n  dependencies:\n    debug "^4.1.0"\n\ndebug@^4.1.0:\n  version "4.3.4"\n`);
+  assert.equal(v1.versions.get("@babel/core@^7.1.0"), "7.1.2");
+  assert.deepEqual(v1.packages.map((p) => `${p.name}@${p.version}`), ["@babel/core@7.1.2", "debug@4.3.4"]);
+  const berry = parseYarnLock(`__metadata:\n  version: 8\n\n"lodash@npm:4.17.20, lodash@npm:^4.17.0":\n  version: 4.17.20\n  resolution: "lodash@npm:4.17.20"\n\n"fx@workspace:.":\n  version: 0.0.0-use.local\n  resolution: "fx@workspace:."\n`);
+  assert.equal(berry.versions.get("lodash@^4.17.0"), "4.17.20");
+  assert.deepEqual(berry.packages, [{ name: "lodash", version: "4.17.20" }]);
+});
+
+test("pnpm-lock v5, v6, and v9 with workspaces", () => {
+  const v5 = parsePnpmLock(`lockfileVersion: 5.4\n\nspecifiers:\n  react: ^18.0.0\n\ndependencies:\n  react: 18.2.0\n\npackages:\n\n  /react/18.2.0:\n    resolution: {integrity: sha512-x}\n\n  /@types/react/18.0.1_csstype@3.0.0:\n    dev: true\n`);
+  assert.equal(v5.versionOf("", "react"), "18.2.0");
+  assert.deepEqual(v5.packages.map((p) => `${p.name}@${p.version}`), ["react@18.2.0", "@types/react@18.0.1"]);
+  const v6 = parsePnpmLock(`lockfileVersion: '6.0'\n\nimporters:\n\n  .:\n    devDependencies:\n      typescript:\n        specifier: ^5.0.0\n        version: 5.1.3\n\n  apps/web:\n    dependencies:\n      next:\n        specifier: 14.0.1\n        version: 14.0.1(react@18.2.0)\n\npackages:\n\n  /next@14.0.1(react@18.2.0):\n    dev: false\n\n  /typescript@5.1.3:\n    dev: true\n`);
+  assert.equal(v6.versionOf("", "typescript"), "5.1.3");
+  assert.equal(v6.versionOf("apps/web", "next"), "14.0.1");
+  assert.deepEqual(v6.packages.map((p) => `${p.name}@${p.version}`), ["next@14.0.1", "typescript@5.1.3"]);
+  const v9 = parsePnpmLock(`lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      '@scope/x':\n        specifier: 1.0.0\n        version: 1.0.0\n      local:\n        specifier: workspace:*\n        version: link:packages/local\n\npackages:\n\n  '@scope/x@1.0.0':\n    resolution: {integrity: sha512-x}\n`);
+  assert.equal(v9.versionOf("", "@scope/x"), "1.0.0");
+  assert.equal(v9.versionOf("", "local"), null);
+  assert.deepEqual(v9.packages, [{ name: "@scope/x", version: "1.0.0" }]);
+});
+
+test("upgrade command follows the package manager", () => {
+  const dep = { name: "x", kind: "dev" };
+  assert.equal(upgradeCommand(dep, "1.0.0", { packageManager: "pnpm" }), "pnpm add --save-exact --save-dev x@1.0.0");
+  assert.equal(upgradeCommand(dep, "1.0.0", { packageManager: "yarn" }), "yarn add --exact --dev x@1.0.0");
+  assert.equal(upgradeCommand(dep, "1.0.0", { packageManager: "npm" }), "npm install --save-exact --save-dev x@1.0.0");
 });
