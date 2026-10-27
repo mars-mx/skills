@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Usage: node scan.mjs [project-root] [--cooldown <days>] [--out <dir>] [--eco npm|PyPI]
-// Finds npm and Python manifests, checks every direct dependency against its registry,
+// Usage: node scan.mjs [project-root] [--cooldown <days>] [--out <dir>] [--eco npm|PyPI|Go]
+// Finds npm, Python, and Go manifests, checks every direct dependency against its registry,
 // OSV (CVEs, CWEs, fixed versions, malware), and its release notes, and checks every
 // locked package for vulnerabilities. Prints a compact report to stdout and writes
 // <out>/report.json plus one release-notes file per upgrade to <out>/notes/.
@@ -12,6 +12,7 @@ import {
 } from "./lib.mjs";
 import * as npm from "./npm.mjs";
 import * as pypi from "./pypi.mjs";
+import * as go from "./go.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
@@ -23,11 +24,11 @@ const onlyEco = flag("--eco", null);
 const outFlag = flag("--out", null);
 const root = resolve(args[0] ?? process.cwd());
 const out = resolve(outFlag ?? join(process.env.TMPDIR ?? tmpdir(), "dep-upgrades", basename(root)));
-const managers = [npm, pypi].filter((m) => !onlyEco || m.ecosystem.toLowerCase() === onlyEco.toLowerCase());
+const managers = [npm, pypi, go].filter((m) => !onlyEco || m.ecosystem.toLowerCase() === onlyEco.toLowerCase());
 
 const projects = managers.flatMap((m) => m.discover(root).map((p) => ({ ...p, manager: m })));
 if (!projects.length) {
-  console.log(`no npm or Python manifests under ${root}`);
+  console.log(`no npm, Python, or Go manifests under ${root}`);
   process.exit(0);
 }
 
@@ -62,10 +63,14 @@ const packages = await pool(directs, 6, async ({ ecosystem, dep, meta, projects:
   const commandsFor = (version) => projs.map((p) => `cd ${p.dir} && ${manager.upgradeCommand(dep, version, p)}`);
   const own = meta.versions.find((v) => compareVersions(v.version, dep.version) === 0);
   const t = chooseTarget({ current: dep.version, versions: meta.versions, vulns, cooldownDays: cooldown });
-  const sev = severityOf({ vulns, deprecated: own?.deprecated, yanked: own?.yanked, ...t });
+  // Go: a new major is a new module path, so the registry reports it separately.
+  if (meta.majors) t.majorsBehind = meta.majors.length;
+  const deprecated = !!(own?.deprecated || meta.deprecated);
+  const sev = severityOf({ vulns, deprecated, yanked: own?.yanked, ...t });
   const pkg = {
     ...base, ...t, ...sev, vulns, repo: meta.repo,
-    deprecated: !!own?.deprecated, yanked: !!own?.yanked,
+    deprecated, yanked: !!own?.yanked,
+    ...(meta.majors?.length ? { nextMajor: meta.majors.at(-1) } : {}),
     bump: t.target ? bumpKind(dep.version, t.target) : "none",
     commands: t.target ? commandsFor(t.target) : [],
     commandsInMajor: t.inMajor && t.inMajor !== t.target ? commandsFor(t.inMajor) : [],
@@ -128,8 +133,8 @@ const vulnLines = (vulns) => {
   const shown = vulns.slice(0, 5).map(vulnLine);
   const rest = vulns.slice(5);
   if (rest.length) {
-    const counts = ORDER.map((l) => [l, rest.filter((v) => v.severity === l).length]).filter(([, n]) => n).map(([l, n]) => `${n} ${l}`);
-    shown.push(`  +${rest.length} more vulns (${counts.join(", ")}${rest.some((v) => v.severity === "unknown") ? ", some unknown" : ""}), highest fix ${rest.map((v) => v.fixed).filter(Boolean).sort(compareVersions).at(-1) ?? "none"}`);
+    const counts = [...ORDER, "unknown"].map((l) => [l, rest.filter((v) => v.severity === l).length]).filter(([, n]) => n).map(([l, n]) => `${n} ${l}`);
+    shown.push(`  +${rest.length} more vulns (${counts.join(", ")}), highest fix ${rest.map((v) => v.fixed).filter(Boolean).sort(compareVersions).at(-1) ?? "none"}`);
   }
   return shown;
 };
@@ -141,8 +146,8 @@ for (const h of hygiene) {
 const actionable = packages.filter((p) => p.severity !== "none" || p.error).sort(bySeverity);
 for (const p of actionable) {
   if (p.error) { lines.push(`[${p.severity}] ${p.ecosystem} ${p.name} ${p.current}: ERROR ${p.error}`); lines.push(...vulnLines(p.vulns)); continue; }
-  const to = p.remove ? "-> REMOVE (malicious, no safe version)" : p.target ? `-> ${p.target}${p.fresh ? " (fresh, inside cooldown)" : ""}` : "-> hold (no cooled release)";
-  const inMajor = p.inMajor && p.inMajor !== p.target ? ` in-major ${p.inMajor}` : "";
+  const to = p.remove ? "-> REMOVE (malicious, no safe version)" : p.target ? `-> ${p.target}${p.fresh ? " (fresh, inside cooldown)" : ""}` : p.nextMajor && !p.releasesBehind ? "-> current in its major" : "-> hold (no cooled release)";
+  const inMajor = p.inMajor && p.inMajor !== p.target ? ` in-major ${p.inMajor}` : p.nextMajor ? ` new major ${p.nextMajor.path}@${p.nextMajor.latest}` : "";
   lines.push(`[${p.severity}] ${p.ecosystem} ${p.name} ${p.current} ${to}${inMajor} latest ${p.latest} | ${p.bump}, ${p.releasesBehind} rel, ${p.lagDays}d behind | wait ${p.wait} | ${p.reasons.join("; ")}`);
   lines.push(...vulnLines(p.vulns));
   if (p.breaking && (p.breaking.major || p.breaking.lines)) lines.push(`  breaking: ${[p.breaking.major && "major bump", p.breaking.lines && `${p.breaking.lines} note lines`].filter(Boolean).join(", ")}`);

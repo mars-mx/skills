@@ -122,10 +122,18 @@ export async function osvScan(queries) {
   const allIds = [...new Set([...idsByKey.values()].flat())];
   const details = new Map();
   await pool(allIds, 12, async (id) => details.set(id, await getJSON(`${OSV}/vulns/${id}`)));
+  // Records without a severity (GO-, PYSEC-) take it from their GHSA alias.
+  const withAliases = (ids) => [...new Set(ids.flatMap((id) => [id, ...(details.get(id)?.database_specific?.severity ? [] : (details.get(id)?.aliases ?? []).filter((a) => a.startsWith("GHSA-")))]))];
+  const missing = [...new Set([...idsByKey.values()].flatMap(withAliases))].filter((id) => !details.has(id));
+  await pool(missing, 12, async (id) => details.set(id, await getJSON(`${OSV}/vulns/${id}`).catch(() => null)));
   const out = new Map();
   for (const [key, ids] of idsByKey) {
     const [ecosystem, name, version] = key.split("|");
-    out.set(key, summarizeVulns(ids.map((id) => details.get(id)).filter(Boolean), { ecosystem, name, version }));
+    // An alias record counts only if it names this package: a CVE can be shared by unrelated packages.
+    const affects = (rec) => (rec.affected ?? []).some((a) => a.package?.ecosystem === ecosystem && normalizeName(a.package?.name, ecosystem) === name);
+    const all = withAliases(ids).map((id) => details.get(id)).filter(Boolean);
+    const own = all.filter((rec) => ids.includes(rec.id) || affects(rec));
+    out.set(key, summarizeVulns(own, { ecosystem, name, version }, all.filter((rec) => !own.includes(rec))));
   }
   return out;
 }
@@ -134,8 +142,10 @@ const SEVERITY_ORDER = ["none", "low", "medium", "high", "critical"];
 const OSV_SEVERITY = { LOW: "low", MODERATE: "medium", MEDIUM: "medium", HIGH: "high", CRITICAL: "critical" };
 
 // Collapses aliases (GHSA and PYSEC for the same CVE) into one entry and takes
-// severity and CWEs from whichever record carries them.
-export function summarizeVulns(records, pkg) {
+// severity and CWEs from whichever record carries them. `foreign` are alias records
+// filed for another package (a Go stdlib CVE filed against an app that vendors it):
+// they only fill in a missing severity and CWEs.
+export function summarizeVulns(records, pkg, foreign = []) {
   const groups = [];
   for (const rec of records) {
     const keys = new Set([rec.id, ...(rec.aliases ?? [])]);
@@ -147,13 +157,14 @@ export function summarizeVulns(records, pkg) {
     recs.sort((a, b) => rank(b) - rank(a));
     const main = recs[0];
     const malicious = recs.some((r) => r.id.startsWith("MAL-"));
-    const sev = recs.map((r) => OSV_SEVERITY[r.database_specific?.severity]).find(Boolean);
+    const borrowed = foreign.filter((r) => keys.has(r.id) || (r.aliases ?? []).some((a) => keys.has(a)));
+    const sev = [...recs, ...borrowed].map((r) => OSV_SEVERITY[r.database_specific?.severity]).find(Boolean);
     return {
       id: main.id,
       cve: [...keys].filter((k) => k.startsWith("CVE-")).sort(),
       severity: malicious ? "critical" : (sev ?? "unknown"),
       malicious,
-      cwe: [...new Set(recs.flatMap((r) => r.database_specific?.cwe_ids ?? []))].sort(),
+      cwe: [...new Set([...recs, ...borrowed].flatMap((r) => r.database_specific?.cwe_ids ?? []))].sort(),
       cvss: recs.flatMap((r) => r.severity ?? []).find((s) => s.type?.startsWith("CVSS"))?.score ?? null,
       fixed: minFixed(recs, pkg),
       // Malware entries list hijacked versions; none listed and no fix means the whole package.
@@ -328,7 +339,7 @@ export function flagLines(entries) {
 
 // ---------- discovery ----------
 
-const SKIP_DIRS = new Set(["node_modules", ".git", ".venv", "venv", "env", "site-packages", "dist", "build", ".next", ".tox", "__pycache__", "coverage"]);
+const SKIP_DIRS = new Set(["node_modules", "vendor", ".git", ".venv", "venv", "env", "site-packages", "dist", "build", ".next", ".tox", "__pycache__", "coverage"]);
 
 export function findFiles(root, match, dir = root, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

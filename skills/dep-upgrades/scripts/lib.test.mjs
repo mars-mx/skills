@@ -147,3 +147,24 @@ test("upgrade command follows the package manager", () => {
   assert.equal(upgradeCommand(dep, "1.0.0", { packageManager: "yarn" }), "yarn add --exact --dev x@1.0.0");
   assert.equal(upgradeCommand(dep, "1.0.0", { packageManager: "npm" }), "npm install --save-exact --save-dev x@1.0.0");
 });
+
+test("go.mod: direct, indirect, replace, toolchain, retractions, majors", async () => {
+  const { parseGoMod, retractions, splitMajor } = await import("./go.mjs");
+  const mod = parseGoMod(`module example.com/fx\n\ngo 1.22\n\ntoolchain go1.22.5\n\nrequire (\n\tgithub.com/a/b v1.2.0\n\tgithub.com/c/d/v3 v3.0.1 // indirect\n\texample.com/local v0.0.0\n\tgithub.com/old/x v1.0.0\n)\n\nrequire github.com/e/f v0.4.0\n\nreplace example.com/local => ../local\n\nreplace github.com/old/x => github.com/new/x v1.1.0\n`);
+  assert.equal(mod.goVersion, "1.22.5");
+  assert.deepEqual(mod.requires.map((r) => `${r.name}@${r.version}${r.indirect ? " i" : ""}`),
+    ["github.com/a/b@v1.2.0", "github.com/c/d/v3@v3.0.1 i", "github.com/new/x@v1.1.0", "github.com/e/f@v0.4.0"]);
+  assert.deepEqual(retractions(`module x\n\nretract (\n\tv1.0.1 // broken\n\t[v1.1.0, v1.1.3]\n)\n`), [{ from: "v1.0.1", to: "v1.0.1" }, { from: "v1.1.0", to: "v1.1.3" }]);
+  assert.deepEqual(splitMajor("github.com/c/d/v3"), { base: "github.com/c/d", major: 3 });
+  assert.deepEqual(splitMajor("gopkg.in/yaml.v3"), { base: "gopkg.in/yaml.v3", major: 1 });
+});
+
+test("foreign alias records lend severity and CWEs, not identity", () => {
+  const own = { id: "GO-2025-3563", aliases: ["CVE-2025-22871"], summary: "Request smuggling in net/http", affected: [{ package: { name: "stdlib", ecosystem: "Go" }, ranges: [{ type: "SEMVER", events: [{ introduced: "0" }, { fixed: "1.23.8" }] }] }] };
+  const foreign = { id: "GHSA-g9pc-8g42-g6vq", aliases: ["CVE-2025-22871"], summary: "RoadRunner smuggling", database_specific: { severity: "CRITICAL", cwe_ids: ["CWE-444"] }, affected: [{ package: { name: "github.com/roadrunner-server/http/v5", ecosystem: "Go" } }] };
+  const [v] = summarizeVulns([own], { ecosystem: "Go", name: "stdlib", version: "1.21.0" }, [foreign]);
+  assert.equal(v.id, "GO-2025-3563");
+  assert.equal(v.severity, "critical");
+  assert.deepEqual(v.cwe, ["CWE-444"]);
+  assert.equal(v.fixed, "1.23.8");
+});

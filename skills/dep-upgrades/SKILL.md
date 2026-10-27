@@ -1,13 +1,13 @@
 ---
 name: dep-upgrades
-description: Weekly dependency check for npm and Python - CVEs and CWEs from OSV, upgrade targets with a supply-chain cooldown, release-note diffs, severity with a wait time, breaking-change analysis in the codebase, and an "Automated package upgrades" PR. Run as /dep-upgrades [--auto] [--cooldown <days>].
+description: Weekly dependency check for npm, Python, and Go - CVEs and CWEs from OSV, upgrade targets with a supply-chain cooldown, release-note diffs, severity with a wait time, breaking-change analysis in the codebase, and an "Automated package upgrades" PR. Run as /dep-upgrades [--auto] [--cooldown <days>].
 disable-model-invocation: true
 argument-hint: "[--auto] [--cooldown <days>]"
 ---
 
 # Dependency upgrades
 
-Find every npm and Python manifest in the repo, decide which packages to upgrade and how urgently, apply the safe upgrades, and open one PR. You are the **orchestrator** (Opus): you judge severity, breaking changes, and grouping. Subagents do the reading:
+Find every npm, Python, and Go manifest in the repo, decide which packages to upgrade and how urgently, apply the safe upgrades, and open one PR. You are the **orchestrator** (Opus): you judge severity, breaking changes, and grouping. Subagents do the reading:
 
 | Work | Agent |
 | --- | --- |
@@ -20,9 +20,9 @@ Invoking this skill is the user's request for a branch and a PR. It overrides th
 
 ## Policy
 
-- **Data comes from the script, never from web search.** `scripts/scan.mjs` queries the npm registry, PyPI, OSV (CVEs, CWEs, fixed versions, malware), and GitHub release notes or `CHANGELOG` files. If you miss data, extend the script.
+- **Data comes from the script, never from web search.** `scripts/scan.mjs` queries the npm registry, PyPI, the Go module proxy, OSV (CVEs, CWEs, fixed versions, malware), and GitHub release notes or `CHANGELOG` files. If you miss data, extend the script.
 - **Cooldown.** The target is the newest stable release that is at least `--cooldown` days old (default 14). This keeps the repo one or two releases behind and out of reach of a freshly hijacked release. A security fix beats the cooldown: the target is then at least the highest fixed version, marked `fresh`.
-- **Pinning.** Every upgraded package is pinned exactly (`npm install --save-exact`, `name==version`). Ranges you do not touch stay as they are and are listed under supply chain in the PR.
+- **Pinning.** Every upgraded package is pinned exactly (`npm install --save-exact`, `name==version`; Go modules are exact by design). Ranges you do not touch stay as they are and are listed under supply chain in the PR.
 - **Severity** and the wait time per level:
 
   | Severity | Trigger (any) | Upgrade within |
@@ -33,7 +33,7 @@ Invoking this skill is the user's request for a branch and a PR. It overrides th
   | `low` | anything else outdated | next cycle (90 days) |
 
   The script sets the level from the data. You may lower a vuln-driven level only with the attack-vector verdict `not-reachable`, and never for a malicious package.
-- **Breaking.** A package is breaking when the bump is major (including `0.x` minor) or its release notes name a breaking change. It is **breaking-used** when a Haiku search finds the changed API in this repo.
+- **Breaking.** A package is breaking when the bump is major (including `0.x` minor) or its release notes name a breaking change. In Go a new major is a new module path (`/v2`): the scan shows it as `new major <path>@<version>`, and taking it means rewriting every import, so it is always breaking-used. It is **breaking-used** when a Haiku search finds the changed API in this repo.
 - **Modes.** Interactive by default. `--auto` is for unattended runs (`/schedule`, `/loop`): ask nothing, leave breaking-used packages out of the PR and list them under **Needs decision**.
 
 ## Steps
@@ -51,7 +51,7 @@ Set `RUN_DIR=${TMPDIR:-/tmp}/dep-upgrades/<repo>/`. Nothing from it is committed
 node ${CLAUDE_SKILL_DIR}/scripts/scan.mjs . --out "$RUN_DIR" [--cooldown <days>]
 ```
 
-Read stdout only. It lists each package with severity, `current -> target`, `in-major` (newest cooled release in the current major), latest, bump, releases and days behind, the wait time, up to 5 vulns (ID, CVE, severity, CWE, fixed version), breaking signals, and the path to its release notes. `transitive:` lists vulnerable locked packages that are not direct dependencies. `RUN_DIR/report.json` holds the full data for subagents.
+Read stdout only. It lists each package with severity, `current -> target`, `in-major` (newest cooled release in the current major), latest, bump, releases and days behind, the wait time, up to 5 vulns (ID, CVE, severity, CWE, fixed version), breaking signals, and the path to its release notes. `transitive:` lists vulnerable locked packages that are not direct dependencies. For Go it also lists `stdlib` at the `toolchain` (or `go`) version from `go.mod`. `RUN_DIR/report.json` holds the full data for subagents.
 
 A `-> REMOVE` line is a malicious package with no safe version. A `not-checked:` line lists packages the scan could not resolve to a version (unsupported lockfile, no pin), so they got no vuln check.
 
@@ -91,7 +91,7 @@ For per-package PRs, run steps 6 to 8 per breaking package on its own branch `de
 
 ### 6. Apply
 
-Run the `commands` from `report.json` for each package, one per manifest that declares it (`commandsInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. The `commands` already use the repo's package manager (`npm`, `yarn`, or `pnpm`, from the lockfile). For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `yarn up -R <name>` for Yarn Berry, `yarn upgrade <name>` for Yarn 1, `pnpm update --depth Infinity <name>` for pnpm; if the range of the parent does not allow the fix, pin it with `resolutions` (Yarn) or `pnpm.overrides` (pnpm) in `package.json`, and name the override in the PR; `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. A transitive fix that needs a parent's major bump goes to the parent's decision.
+Run the `commands` from `report.json` for each package, one per manifest that declares it (`commandsInMajor` for in-major). For Python projects without `uv`, `poetry`, or `pdm`, edit the requirement line to `name==version`; if a `requirements.in` exists next to it, edit that file and run `pip-compile` instead. The `commands` already use the repo's package manager (`npm`, `yarn`, or `pnpm`, from the lockfile). For transitive vulns: `npm update <name>` or `npm audit fix` (never `--force`) for npm, `yarn up -R <name>` for Yarn Berry, `yarn upgrade <name>` for Yarn 1, `pnpm update --depth Infinity <name>` for pnpm; if the range of the parent does not allow the fix, pin it with `resolutions` (Yarn) or `pnpm.overrides` (pnpm) in `package.json`, and name the override in the PR; `uv lock --upgrade-package <name>` or `poetry update <name>` for Python. For Go, `go get <module>@<fixed> && go mod tidy` fixes an indirect module; a `stdlib` vuln is fixed by raising the `toolchain` directive (or `go`, if there is no `toolchain`) to the fixed patch release. A transitive fix that needs a parent's major bump goes to the parent's decision.
 
 Dispatch migration agents now, if the user chose them. Commit per package: `deps: <name> <from> -> <to>`.
 
