@@ -21,6 +21,17 @@ The issue body. `issue-to-pr` reads these headings by name, so keep them in Engl
 | --- | --- | --- | --- |
 | <what was decided> | <why> | long-term \| workaround: <the long-term change it postpones> | user \| <file:line, comment URL> |
 
+## Assumptions
+Leave out when there is none.
+| Assumption | Evidence | Kind | If wrong |
+| --- | --- | --- | --- |
+| <what the spec takes as given> | user \| <file:line, doc, comment URL> | long-term \| workaround: <the long-term change it postpones> | <what breaks, or which work changes> |
+
+## Contracts and data model
+- **Review artifact:** <URL> | skip: complexity S, no contract or data model change
+- **Contracts:** per changed contract, `<layer>: <name>` (`<file:line>`): <before → after>, breaking \| additive, consumers: <paths> | none
+- **Data model:** per changed entity, `<entity>` (`<file:line>`): <fields added, changed, removed>; migration: <steps, backfill, rollback> | none
+
 ## Verification
 - **Playwright:** <test file: what it asserts (AC n)> | skip: <reason that describes the change>
 - **Unit:** <...> | skip: <...>
