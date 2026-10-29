@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Custom Claude Code Skills",
-    "version": "0.0.4"
+    "version": "0.0.5"
   },
   "plugins": [
     {
@@ -56,6 +56,19 @@
       "strict": false,
       "skills": [
         "./skills/humanize"
+      ]
+    },
+    {
+      "name": "software-engineering",
+      "description": "Architecture judgment: design from the ideal, keep service boundaries, size every edge case before special-casing it, and an Opus impact-review agent that judges whether a special case is justified, plus /report to file a wrong turn as an issue on this repo",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/proportionality",
+        "./skills/report"
+      ],
+      "agents": [
+        "./plugin-agents/impact-review.md"
       ]
     }
   ]

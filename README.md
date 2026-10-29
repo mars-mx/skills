@@ -98,6 +98,18 @@ How Claude communicates with you in long sessions, built for many parallel sessi
 
 Skills load only when their description matches. To apply `humanize` in every session, add a line to `~/.claude/CLAUDE.md`, for example: `Use the humanize skill for every report, plan, and decision.`
 
+### software-engineering
+
+Architecture judgment: the main design serves the common case, and an edge case gets special handling only in proportion to its measured impact.
+
+| Skill or agent | Invocation | Purpose |
+| --- | --- | --- |
+| `proportionality` | automatic before special cases, caps, locks, retries, or modes for a subset of cases | Sets the order of thought: the ideal design first, then sourced constraints, then fit inside the intended service boundaries (existing violations are debt, not precedent), then each edge case sized as N of M affected with the cost of a wrong result. Picks the lowest rung of a response ladder: accept and mark, contain at the edge, or redesign. Includes disproportionate-versus-proportional patterns and three worked examples, one of them on later needs: extensible, not extended. |
+| `impact-review` (agent, Opus) | called by `proportionality` before a special case or redesign | Reviews one decision with read-only repo access. Defaults to accept and mark, returns "insufficient evidence" when the numbers are missing, and rejects proposals that change behavior for unaffected cases or cross a boundary. |
+| `report` | `/report <what went wrong>` only | Condenses this session's transcript, has a Sonnet subagent find the wrong turn, its cause, and the rule that should have caught it, and drafts an abstracted issue with a proposed rule change. Creates the issue on `mars-mx/skills` (public) only after you approve the draft. |
+
+The agent lives in `plugin-agents/`, not `agents/`, because all plugins share the repository root and a root `agents/` folder would load into every plugin.
+
 ## Installation
 
 ### Claude Code
@@ -116,7 +128,7 @@ Then install a plugin from it:
 
 ### Manual
 
-Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`.
+Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/impact-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:impact-review` to `impact-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`.
 
 ## Creating New Skills
 
