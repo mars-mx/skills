@@ -67,6 +67,27 @@ Dependency upgrades with a security focus, built to run once a week per repo.
 
 To run it weekly, use `/schedule` with the prompt `/dep-upgrades --auto`.
 
+### k8s-skills
+
+Kubernetes cluster upgrades for HA clusters, from a GitOps repo. Installs on its own, without `deps-skills`.
+
+| Skill | Invocation | Purpose |
+| --- | --- | --- |
+| `k8s-upgrades` | `/k8s-upgrades [<cluster>] [--plan] [--auto] [--cooldown <days>] [--target <minor>]` only | Scans one cluster read-only (kubeadm, k3s, RKE2, Talos, EKS, GKE, AKS): control plane against endoflife.date and the official Kubernetes CVE feed, version skew per the skew policy, removed APIs (live apiserver metrics and repo manifests), and about 50 known add-ons (CNI, CoreDNS, cert-manager, ingress, CSI, Argo CD, Flux, and more) against their GitHub releases, OSV, and end-of-life dates. Plans one minor at a time with a cooldown, summarizes the Kubernetes and add-on release notes with Haiku, checks CVE reachability with Sonnet, and rates each step's risk. Checks HA readiness (etcd quorum, control-plane count, PDBs that block drains, single replicas, replicas on one node, node-local storage, drain capacity, webhooks). Opens deduplicated issues labeled `k8s:upgrade` for blockers, one PR for what the repo declares (add-on versions, system-upgrade-controller Plans, Terraform), and in interactive mode upgrades node by node with a health gate after each node. |
+
+**Requirements.** Node.js 20 or later, `kubectl` with a context for the cluster (read access for the scan; eviction and node patch rights for the upgrade), and `gh` authenticated. Per distro for the upgrade: SSH to the nodes (kubeadm, k3s, RKE2 without system-upgrade-controller), `talosctl`, or the provider CLI (`aws`, `gcloud`, `az`). No API keys: data comes from endoflife.date, kubernetes.io, OSV, GitHub, and the Pluto removed-API list.
+
+**Config** `k8s-upgrades.json` in the GitOps repo root holds per cluster the context, distro, GitOps tool, node access, soak time between minors, and accepted HA exceptions. The skill creates it with you on the first run.
+
+**Scripts** in `skills/k8s-upgrades/scripts/`, both read-only (`kubectl get` only):
+
+| Script | Purpose |
+| --- | --- |
+| `scan.mjs --context <ctx> [--repo <dir>] [--cooldown <days>] [--target <minor>] [--out <dir>]` | Prints a compact report and writes `report.json` plus release-note extracts to `--out`. `--cluster <name>` reads the context and exceptions from `k8s-upgrades.json`. |
+| `health.mjs --context <ctx> [--node <name>] [--expect <version>] [--wait <seconds>]` | Gate between upgrade steps: nodes Ready, `/readyz`, kube-system pods, the upgraded node's version. Exits 1 when red. |
+
+Safety: every call pins `--context`, unattended runs (`--auto`) and `--plan` never change the cluster, anything the repo declares changes only through the PR, and each node upgrade asks first. To run it weekly, use `/schedule` with the prompt `/k8s-upgrades <cluster> --auto`.
+
 ## Installation
 
 ### Claude Code

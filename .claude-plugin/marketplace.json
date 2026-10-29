@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Custom Claude Code Skills",
-    "version": "0.0.2"
+    "version": "0.0.3"
   },
   "plugins": [
     {
@@ -38,6 +38,15 @@
       "strict": false,
       "skills": [
         "./skills/dep-upgrades"
+      ]
+    },
+    {
+      "name": "k8s-skills",
+      "description": "Kubernetes cluster upgrades for kubeadm, k3s, RKE2, Talos, EKS, GKE, and AKS: read-only scan against EOL dates, the Kubernetes CVE feed, OSV, removed APIs, and version skew; release-note risk analysis; HA preflight; issues for blockers; a GitOps PR; and a gated node-by-node upgrade",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/k8s-upgrades"
       ]
     }
   ]
