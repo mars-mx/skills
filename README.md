@@ -88,6 +88,16 @@ Kubernetes cluster upgrades for HA clusters, from a GitOps repo. Installs on its
 
 Safety: every call pins `--context`, unattended runs (`--auto`) and `--plan` never change the cluster, anything the repo declares changes only through the PR, and each node upgrade asks first. To run it weekly, use `/schedule` with the prompt `/k8s-upgrades <cluster> --auto`.
 
+### comm-skills
+
+How Claude communicates with you in long sessions, built for many parallel sessions and frequent context switches.
+
+| Skill | Invocation | Purpose |
+| --- | --- | --- |
+| `humanize` | automatic on change reports, plans, and decisions | Writes each message as a decision brief: a headline readable on its own, a one-line context anchor, the change at system level, why this way with long-term cost and reversibility, every added fallback or workaround (or "none"), up to three alternatives with why not, and one decision with a recommendation. Fits on one screen. Puts any new fallback, workaround, or retry to you as a decision before shipping it. |
+
+Skills load only when their description matches. To apply `humanize` in every session, add a line to `~/.claude/CLAUDE.md`, for example: `Use the humanize skill for every report, plan, and decision.`
+
 ## Installation
 
 ### Claude Code

@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Custom Claude Code Skills",
-    "version": "0.0.3"
+    "version": "0.0.4"
   },
   "plugins": [
     {
@@ -47,6 +47,15 @@
       "strict": false,
       "skills": [
         "./skills/k8s-upgrades"
+      ]
+    },
+    {
+      "name": "comm-skills",
+      "description": "How Claude talks to you in long sessions: a decision brief with headline, long-term trade-offs, alternatives, and every added fallback or workaround put to you as a decision",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/humanize"
       ]
     }
   ]
