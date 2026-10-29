@@ -17,6 +17,7 @@ Invoking this skill is the user's request to commit and push the spec files (the
 - **Every answer becomes a decision** in the spec: what was decided, why, and whether it is `long-term` or `workaround`. A workaround names the long-term change it postpones.
 - **Every assumption has evidence.** An assumption is what the spec takes as given without a decision. Its evidence is code (`file:line`), a doc, or the user's word. An assumption that nothing proves and that changes the work if it is wrong is a fork: ask, and it becomes a decision.
 - **One issue, one PR.** The spec describes what one PR delivers.
+- **Proportionality.** Before step 1, invoke `software-engineering:proportionality` with the Skill tool. Its order of thought shapes every design decision in the spec: the ideal first, then constraints, then fit inside the intended boundaries, then each edge case sized before it changes the design.
 - **Run directory.** Keep drafts in `RUN_DIR=${TMPDIR:-/tmp}/issue-spec/<repo>-<issue or slug>/`. Nothing from it is committed.
 
 ## Steps
@@ -44,7 +45,7 @@ Done when you can name the goal, the affected areas, and every fork from the lis
 
 Resolve every fork with the user, one question per fork. Write the draft spec to `RUN_DIR/spec.md` in the format of [references/spec.md](references/spec.md).
 
-The draft fills `Assumptions` and `Contracts and data model` too: every contract and data model change with its before state from the code.
+The draft fills `Assumptions` and `Contracts and data model` too: every contract and data model change with its before state from the code. Every edge case that came up goes into `Edge cases` with its share and the response from the `proportionality` ladder. A need of a later step goes into `Out of scope` with the addition it will fit in as.
 
 Done when the draft has no open question, every acceptance criterion is testable, every assumption has evidence, and every Verification category has planned tests or a valid skip reason.
 
@@ -68,7 +69,9 @@ Every point needs a concrete case. Change no files.
 
 Bring each cut and each failed decision to the user; scope cuts are the user's call. Update the draft. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3.
 
-Done when a round raises nothing new or the round cap is reached.
+Then run the **proportionality review**: dispatch the `software-engineering:impact-review` agent with the draft, the issue, and the paths of the affected areas, and ask for a verdict on every entry in `Edge cases`, every decision that treats a subset of cases differently, and every later need in `Out of scope`. Bring each verdict that differs from the draft to the user, with the agent's reason; an "insufficient evidence" verdict becomes a fork or a measurement before the spec goes on. Update the draft.
+
+Done when the last plan review round raises nothing new or the round cap is reached, and every proportionality verdict matches the draft or the user decided against it.
 
 ### 5. Technical review
 
@@ -121,10 +124,11 @@ Answer each item with yes or no and the evidence you looked at:
 1. Every acceptance criterion is testable: a test can pass or fail on it.
 2. No open question is left, in the spec or in the issue thread (gh issue view <issue> --comments).
 3. Every decision has a reason; every workaround names the long-term change it postpones.
-4. Every Verification category has planned tests or a reason that describes the change, not the environment.
-5. For UI: the spec story exists, every screen and state in the spec has a story, and the approved additions are listed with their tier.
-6. The spec agrees with the code: run read-only checks (grep, git log) in <repo path> on the files it names. Every assumption's evidence holds.
-7. Unless the review artifact is skipped: the page at its URL (Artifact tool, `action: "read"`) shows every decision and assumption of the spec unchanged, and its contracts and data model match the spec's `Contracts and data model`.
+4. Every edge case has its share, the cost of a wrong result, and a response; every later need in Out of scope names the addition it will fit in as.
+5. Every Verification category has planned tests or a reason that describes the change, not the environment.
+6. For UI: the spec story exists, every screen and state in the spec has a story, and the approved additions are listed with their tier.
+7. The spec agrees with the code: run read-only checks (grep, git log) in <repo path> on the files it names. Every assumption's evidence holds.
+8. Unless the review artifact is skipped: the page at its URL (Artifact tool, `action: "read"`) shows every decision and assumption of the spec unchanged, and its contracts and data model match the spec's `Contracts and data model`.
 End with `CONFIRMED` or `REJECTED: <what to change>`.
 ```
 

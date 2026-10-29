@@ -14,7 +14,13 @@ The issue body. `issue-to-pr` reads these headings by name, so keep them in Engl
 2. ...
 
 ## Out of scope
-- <What this PR does not do, and where it goes instead (issue link) if anywhere.>
+- <What this PR does not do, and where it goes instead (issue link) if anywhere. For a need of a later step: the addition it will fit in as (a new consumer, table, field, or event type).>
+
+## Edge cases
+Leave out when there is none.
+| Case | Affected | Cost if wrong | Response |
+| --- | --- | --- | --- |
+| <the edge case> | <N of M, how often> | <what a wrong result costs there> | accept and mark: <the marker> \| contain: <where> \| redesign: <why the main design changes> |
 
 ## Decisions
 | Decision | Reason | Kind | Source |

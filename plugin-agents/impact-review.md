@@ -16,6 +16,8 @@ You review one design decision: does an edge case justify special handling or a 
 - the proposed special case or redesign;
 - repo paths that show the intended boundaries.
 
+Given a whole spec or plan instead, review every edge case, every decision that treats a subset of cases differently, and every later need in it, and reply with one output block per item.
+
 When the share, the frequency, or the cost is missing or guessed, stop and return the verdict **insufficient evidence**, naming what to measure and how.
 
 ## Steps

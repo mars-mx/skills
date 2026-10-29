@@ -53,6 +53,8 @@ Gates, their verifier checklists, and example messages live in `skills/issue-to-
 
 For a `spec:ready` issue, `issue-to-pr` takes the spec's decisions as given, screenshots the spec story in the baseline, and puts a Spec and a Final screenshot per viewport (`viewports` in `ux.config.json`, default `[1440, 390]`) into the PR body.
 
+`issue-spec` and `issue-to-pr` need the `software-engineering` plugin: `issue-spec` loads `proportionality` before intake, records edge cases with their share and response, and runs an `impact-review` pass after the plan review; `issue-to-pr` checks special cases in its plan review and sends edge cases its implementers report through `impact-review`.
+
 ### deps-skills
 
 Dependency upgrades with a security focus, built to run once a week per repo.
@@ -128,7 +130,7 @@ Then install a plugin from it:
 
 ### Manual
 
-Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/impact-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:impact-review` to `impact-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`.
+Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/impact-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:impact-review` to `impact-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`. Both use `proportionality` and the `impact-review` agent from `software-engineering`.
 
 ## Creating New Skills
 

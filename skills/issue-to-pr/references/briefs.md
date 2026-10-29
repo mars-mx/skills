@@ -19,6 +19,7 @@ Follow the existing pattern in <path:lines>. Use <existing helper or component> 
 Decisions already made: <decisions from plan.md that touch this slice>
 Approved UI additions: <additions from the spec with their tier, or none>. These are approved by the user; build them in the catalog with a story, without asking.
 Out of scope: every file not listed above. If the slice needs a change outside its files, stop and report it instead of making it.
+Edge cases: handle only the ones listed here: <Edge cases from plan.md that touch this slice, or none>. For any other edge case you meet, report it with the share of cases it affects instead of adding logic for it.
 
 Done when:
 - <acceptance criterion 1, checkable>
@@ -66,6 +67,7 @@ Report:
 2. Per assumption: holds or not, with evidence (file:line, issue comment); long-term or workaround; what breaks in a year if it is a workaround.
 3. Existing code the plan should reuse instead of adding (path).
 4. Questions only the issue author can answer, and why the code cannot.
+5. Per special case (logic, cap, threshold, lock, retry, flag, or mode for a subset of cases): the share it affects, whether a lower response holds (accept and mark, then contain at the edge, then redesign), and whether it changes behavior for unaffected cases or crosses a service boundary.
 Every point needs a concrete case. Change no files.
 ```
 

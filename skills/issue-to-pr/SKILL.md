@@ -48,7 +48,7 @@ Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default
    - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Mark which slices touch disjoint files and can run in parallel.
 3. Run the **plan review**: a reviewer subagent with the plan-review brief, which applies the Ponytail `ultra` rules (question every part the need does not justify) and judges each assumption as long-term or workaround. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3. Update the plan after each round. Keep `ultra` mode inside the reviewer; your own session stays at its level.
 
-**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Decisions, Assumptions, Contracts and data model, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its contract and data model changes were approved on the review artifact, and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves), or a spec story path missing on the default branch, fires G1.
+**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Edge cases, Decisions, Assumptions, Contracts and data model, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its contract and data model changes were approved on the review artifact, and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves), or a spec story path missing on the default branch, fires G1.
 
 Done when every assumption is backed by evidence or decided with a recorded reason, and no G1 trigger holds. A G1 trigger that holds fires G1.
 
@@ -67,7 +67,7 @@ Done when every category has tests or a valid skip reason, and the baseline is g
 
 ### 4. Implement
 
-For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. Commit each accepted slice.
+For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:impact-review` agent. Commit each accepted slice.
 
 Done when every slice is committed and the typecheck passes.
 
