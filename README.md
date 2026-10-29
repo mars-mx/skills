@@ -53,7 +53,7 @@ Gates, their verifier checklists, and example messages live in `skills/issue-to-
 
 For a `spec:ready` issue, `issue-to-pr` takes the spec's decisions as given, screenshots the spec story in the baseline, and puts a Spec and a Final screenshot per viewport (`viewports` in `ux.config.json`, default `[1440, 390]`) into the PR body.
 
-`issue-spec` and `issue-to-pr` need the `software-engineering` plugin: `issue-spec` loads `proportionality` before intake, records edge cases with their share and response, and runs an `impact-review` pass after the plan review; `issue-to-pr` checks special cases in its plan review and sends edge cases its implementers report through `impact-review`.
+`issue-spec` and `issue-to-pr` need the `software-engineering` plugin: `issue-spec` loads `proportionality` before intake, records edge cases with their share and response, and runs an `proportionality-review` pass after the plan review; `issue-to-pr` checks special cases in its plan review and sends edge cases its implementers report through `proportionality-review`.
 
 ### deps-skills
 
@@ -107,7 +107,7 @@ Architecture judgment: the main design serves the common case, and an edge case 
 | Skill or agent | Invocation | Purpose |
 | --- | --- | --- |
 | `proportionality` | automatic before special cases, caps, locks, retries, or modes for a subset of cases | Sets the order of thought: the ideal design first, then sourced constraints, then fit inside the intended service boundaries (existing violations are debt, not precedent), then each edge case sized as N of M affected with the cost of a wrong result. Picks the lowest rung of a response ladder: accept and mark, contain at the edge, or redesign. Includes disproportionate-versus-proportional patterns and three worked examples, one of them on later needs: extensible, not extended. |
-| `impact-review` (agent, Opus) | called by `proportionality` before a special case or redesign | Reviews one decision with read-only repo access. Defaults to accept and mark, returns "insufficient evidence" when the numbers are missing, and rejects proposals that change behavior for unaffected cases or cross a boundary. |
+| `proportionality-review` (agent, Opus) | called by `proportionality`, `issue-spec`, and `issue-to-pr` before a special case or redesign | Loads `proportionality` as its rules and reviews one decision or a whole spec with read-only repo access. Defaults to accept and mark, returns "insufficient evidence" when the numbers are missing, and rejects proposals that change behavior for unaffected cases or cross a boundary. |
 | `report` | `/report <what went wrong>` only | Condenses this session's transcript, has a Sonnet subagent find the wrong turn, its cause, and the rule that should have caught it, and drafts an abstracted issue with a proposed rule change. Creates the issue on `mars-mx/skills` (public) only after you approve the draft. |
 
 The agent lives in `plugin-agents/`, not `agents/`, because all plugins share the repository root and a root `agents/` folder would load into every plugin.
@@ -130,7 +130,7 @@ Then install a plugin from it:
 
 ### Manual
 
-Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/impact-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:impact-review` to `impact-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`. Both use `proportionality` and the `impact-review` agent from `software-engineering`.
+Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/proportionality-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:proportionality-review` to `proportionality-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`. Both use `proportionality` and the `proportionality-review` agent from `software-engineering`.
 
 ## Creating New Skills
 

@@ -67,7 +67,7 @@ Done when every category has tests or a valid skip reason, and the baseline is g
 
 ### 4. Implement
 
-For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:impact-review` agent. Commit each accepted slice.
+For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:proportionality-review` agent. Commit each accepted slice.
 
 Done when every slice is committed and the typecheck passes.
 

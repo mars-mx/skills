@@ -69,7 +69,7 @@ Every point needs a concrete case. Change no files.
 
 Bring each cut and each failed decision to the user; scope cuts are the user's call. Update the draft. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3.
 
-Then run the **proportionality review**: dispatch the `software-engineering:impact-review` agent with the draft, the issue, and the paths of the affected areas, and ask for a verdict on every entry in `Edge cases`, every decision that treats a subset of cases differently, and every later need in `Out of scope`. Bring each verdict that differs from the draft to the user, with the agent's reason; an "insufficient evidence" verdict becomes a fork or a measurement before the spec goes on. Update the draft.
+Then run the **proportionality review**: dispatch the `software-engineering:proportionality-review` agent with the draft, the issue, and the paths of the affected areas, and ask for a verdict on every entry in `Edge cases`, every decision that treats a subset of cases differently, and every later need in `Out of scope`. Bring each verdict that differs from the draft to the user, with the agent's reason; an "insufficient evidence" verdict becomes a fork or a measurement before the spec goes on. Update the draft.
 
 Done when the last plan review round raises nothing new or the round cap is reached, and every proportionality verdict matches the draft or the user decided against it.
 

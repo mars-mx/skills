@@ -18,7 +18,7 @@ The repo `mars-mx/skills` is **public**. The issue describes only the general pa
 2. **Analyze with Sonnet.** Spawn one Agent with `model: "sonnet"`. It starts with no context, so pass:
    - the transcript path;
    - the user's note;
-   - the rule files: `${CLAUDE_SKILL_DIR}/../proportionality/SKILL.md`, `${CLAUDE_SKILL_DIR}/../../plugin-agents/impact-review.md`, `${CLAUDE_SKILL_DIR}/../humanize/SKILL.md`, and `~/.claude/CLAUDE.md`;
+   - the rule files: `${CLAUDE_SKILL_DIR}/../proportionality/SKILL.md`, `${CLAUDE_SKILL_DIR}/../../plugin-agents/proportionality-review.md`, `${CLAUDE_SKILL_DIR}/../humanize/SKILL.md`, and `~/.claude/CLAUDE.md`;
    - this task and output format:
 
    > Find the turn where Claude went wrong, guided by the user's note. Read the turns before it to see why: which assumption, trigger, or shortcut led there. Then check the rule files: which rule should have caught it, and why it did not (the rule is missing, its wording is too weak, its trigger did not fire, or the skill was not loaded). Propose the smallest change that would have prevented it, written as a positive instruction. The repo is public: describe only the general pattern, as it could happen in any codebase, with no implementation details, code, code patterns, internal names, paths, or identifying numbers. This applies to the proposed change, too. Reply in exactly this format:

@@ -24,7 +24,7 @@ Take the lowest rung that holds.
 2. **Contain.** Handle the outlier at its edge, so only the affected cases see the special logic. The main path stays unchanged.
 3. **Redesign.** Change the main design only when the "outlier" turns out to be common, or when a wrong result costs money, data, or security.
 
-Before you take rung 2 or 3, call the `software-engineering:impact-review` agent. It starts with no context, so pass all of this:
+Before you take rung 2 or 3, call the `software-engineering:proportionality-review` agent. It starts with no context, so pass all of this:
 
 - the goal;
 - the ideal design from step 1;

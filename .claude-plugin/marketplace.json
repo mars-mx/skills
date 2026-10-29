@@ -60,7 +60,7 @@
     },
     {
       "name": "software-engineering",
-      "description": "Architecture judgment: design from the ideal, keep service boundaries, size every edge case before special-casing it, and an Opus impact-review agent that judges whether a special case is justified, plus /report to file a wrong turn as an issue on this repo",
+      "description": "Architecture judgment: design from the ideal, keep service boundaries, size every edge case before special-casing it, and an Opus proportionality-review agent that judges whether a special case is justified, plus /report to file a wrong turn as an issue on this repo",
       "source": "./",
       "strict": false,
       "skills": [
@@ -68,7 +68,7 @@
         "./skills/report"
       ],
       "agents": [
-        "./plugin-agents/impact-review.md"
+        "./plugin-agents/proportionality-review.md"
       ]
     }
   ]
