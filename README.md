@@ -112,6 +112,26 @@ Architecture judgment: the main design serves the common case, and an edge case 
 
 The agent lives in `plugin-agents/`, not `agents/`, because all plugins share the repository root and a root `agents/` folder would load into every plugin.
 
+### context-skills
+
+Context hygiene, built to run once a week. Everything that loads before the first prompt, and every tool result left in the history, is re-read on each later request.
+
+| Skill | Invocation | Purpose |
+| --- | --- | --- |
+| `context-audit` | `/context-audit [--days <n>] [--all] [--memory-only]` only | Measures each session's baseline from the first request's `usage` and splits it into tool schemas per MCP server, skill listing, CLAUDE.md, and hook output. Ranks the tool calls of the last `--days` (default 7) by carried tokens (result size times the requests it stayed in context), has Haiku find patterns in the costliest ones, and proposes a fix per finding. Cleans auto memory: deletes session state, moves durable rules into `CLAUDE.md`, merges the rest, rebuilds `MEMORY.md`, and offers to turn auto memory off. Backs up memory and asks once before changing anything. |
+
+**Requirements.** Node.js 20 or later. The scripts only read `~/.claude/`, except `memory.mjs backup` and `reindex`.
+
+**Scripts** in `skills/context-audit/scripts/`:
+
+| Script | Purpose |
+| --- | --- |
+| `baseline.mjs [--days <n>] [--project <path>] [--all]` | Baseline per tool shape, its parts scaled to the measured tokens, and the config that feeds them. |
+| `toolcalls.mjs [--days <n>] [--project <path>] [--out <dir>]` | Tools and calls ranked by carried tokens, repeated reads, and batches for Haiku. |
+| `memory.mjs list\|backup\|reindex` | Lints auto memory, backs it up to `~/.claude/backups/`, and rebuilds `MEMORY.md` from the files' frontmatter. |
+
+The best-practice sources each check rests on are in `skills/context-audit/references/links.md`.
+
 ## Installation
 
 ### Claude Code

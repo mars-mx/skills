@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Custom Claude Code Skills",
-    "version": "0.0.5"
+    "version": "0.0.6"
   },
   "plugins": [
     {
@@ -69,6 +69,15 @@
       ],
       "agents": [
         "./plugin-agents/proportionality-review.md"
+      ]
+    },
+    {
+      "name": "context-skills",
+      "description": "Context hygiene: measure the baseline each session loads (tool schemas per MCP server, skill listing, CLAUDE.md, hooks), rank the costliest tool calls of recent sessions with Haiku pattern search, and clean out auto memory",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/context-audit"
       ]
     }
   ]
