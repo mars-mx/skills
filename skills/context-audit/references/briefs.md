@@ -22,10 +22,9 @@ Look for repeated shapes, not single calls. Examples of patterns:
 - exploration that a subagent could have done (many greps and reads in a row)
 - a large result early in a long session (high remaining)
 
-Return at most 6 patterns, most carried tokens first, one block each:
+Do no arithmetic; the orchestrator sums the ids. Return at most 6 patterns, largest first, one block each:
 ### <short name>
-count: <calls> | tokens: <sum of tokens> | carried: <sum of carried>
-ids: <up to 3 call ids>
+ids: <every matching call id, full, comma-separated>
 cause: <one line: why the output was large or repeated>
 fix: <one concrete change: the narrower command, offset/limit, a filter hook, a CLI instead of
 the MCP tool, delegate to a subagent, or a CLAUDE.md line>

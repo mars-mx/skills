@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 // Usage: node toolcalls.mjs [--days 7] [--project <path>] [--top 20] [--batch 25] [--batches 8] [--out <dir>]
+//        node toolcalls.mjs --sum <id,id,...> [--out <dir>]   count, tokens, and carried of these calls
 // Ranks tool calls from recent transcripts (main sessions and subagents) by context cost.
 // A result's tokens stay in context for every later request until the session ends or compacts,
 // so "carried" = result tokens x requests left. Prints a summary and writes to --out:
 //   calls.jsonl        every call, most carried first
 //   batches/NN.json    the costliest calls, grouped by tool, with result excerpts for Haiku
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fmt, inputSummary, lines, parseArgs, resultText, resultTokens, toolGroup, transcripts } from "./lib.mjs";
 
-const opts = parseArgs(process.argv.slice(2), { days: "7", project: "", top: "20", batch: "25", batches: "8", out: "" });
+const opts = parseArgs(process.argv.slice(2), { days: "7", project: "", top: "20", batch: "25", batches: "8", out: "", sum: "" });
 const days = Number(opts.days);
 const out = opts.out || join(process.env.TMPDIR ?? tmpdir(), "context-audit", new Date().toISOString().slice(0, 10));
 const since = Date.now() - days * 86_400_000;
@@ -51,7 +52,14 @@ export async function scanFile({ file, subagent, dir }) {
   return [...calls.values()].filter((c) => !c.ts || Date.parse(c.ts) >= since);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1]}` && opts.sum) {
+  // Sums for the ids a pattern finder returned; a shortened id matches as a substring.
+  const ids = opts.sum.split(",").map((s) => s.trim()).filter(Boolean);
+  const calls = readFileSync(join(out, "calls.jsonl"), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  const hit = calls.filter((c) => ids.some((id) => c.id === id || c.id.includes(id)));
+  const t = hit.reduce((s, c) => s + c.tokens, 0), k = hit.reduce((s, c) => s + c.carried, 0);
+  console.log(`count: ${hit.length} of ${ids.length} ids | tokens: ${fmt(t)} | carried: ${fmt(k)}`);
+} else if (import.meta.url === `file://${process.argv[1]}`) {
   const files = transcripts({ days, project: opts.project });
   const all = [];
   for (const f of files) all.push(...(await scanFile(f)));

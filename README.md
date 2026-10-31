@@ -118,7 +118,7 @@ Context hygiene, built to run once a week. Everything that loads before the firs
 
 | Skill | Invocation | Purpose |
 | --- | --- | --- |
-| `context-audit` | `/context-audit [--days <n>] [--all] [--memory-only]` only | Measures each session's baseline from the first request's `usage` and splits it into tool schemas per MCP server, skill listing, CLAUDE.md, and hook output. Ranks the tool calls of the last `--days` (default 7) by carried tokens (result size times the requests it stayed in context), has Haiku find patterns in the costliest ones, and proposes a fix per finding. Cleans auto memory: deletes session state, moves durable rules into `CLAUDE.md`, merges the rest, rebuilds `MEMORY.md`, and offers to turn auto memory off. Backs up memory and asks once before changing anything. |
+| `context-audit` | `/context-audit [--days <n>] [--all] [--memory-only] [--auto]` only | Measures each session's baseline from the first request's `usage` and splits it into tool schemas per MCP server, skill listing, CLAUDE.md, and hook output. Ranks the tool calls of the last `--days` (default 7) by carried tokens (result size times the requests it stayed in context), has Haiku find patterns in the costliest ones, and proposes a fix per finding. Cleans auto memory: deletes session state, moves durable rules into `CLAUDE.md`, merges the rest, rebuilds `MEMORY.md`, and offers to turn auto memory off. Backs up memory and asks once before changing anything; `--auto` only reports. |
 
 **Requirements.** Node.js 20 or later. The scripts only read `~/.claude/`, except `memory.mjs backup` and `reindex`.
 
@@ -127,8 +127,10 @@ Context hygiene, built to run once a week. Everything that loads before the firs
 | Script | Purpose |
 | --- | --- |
 | `baseline.mjs [--days <n>] [--project <path>] [--all]` | Baseline per tool shape, its parts scaled to the measured tokens, and the config that feeds them. |
-| `toolcalls.mjs [--days <n>] [--project <path>] [--out <dir>]` | Tools and calls ranked by carried tokens, repeated reads, and batches for Haiku. |
+| `toolcalls.mjs [--days <n>] [--project <path>] [--out <dir>] [--sum <ids>]` | Tools and calls ranked by carried tokens, repeated reads, and batches for Haiku; `--sum` totals the calls of one pattern. |
 | `memory.mjs list\|backup\|reindex` | Lints auto memory, backs it up to `~/.claude/backups/`, and rebuilds `MEMORY.md` from the files' frontmatter. |
+
+To run it weekly, use `/loop 7d /context-audit --all --auto` or a local cron job with `claude -p`; `/schedule` cloud agents cannot read `~/.claude/`.
 
 The best-practice sources each check rests on are in `skills/context-audit/references/links.md`.
 

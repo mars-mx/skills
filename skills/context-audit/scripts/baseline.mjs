@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { CLAUDE_DIR, fmt, lines, median, parseArgs, PROJECTS_DIR, projectDirName, tokens, transcripts } from "./lib.mjs";
+import { CLAUDE_DIR, fmt, lines, median, memoryRoot, parseArgs, PROJECTS_DIR, projectDirName, tokens, transcripts } from "./lib.mjs";
 
 const opts = parseArgs(process.argv.slice(2), { days: "7", project: "", all: false, json: false });
 
@@ -69,6 +69,8 @@ function report(rows, label) {
   for (const [k, rs] of [...shapes].sort((a, b) => median(b[1].map((r) => r.measured)) - median(a[1].map((r) => r.measured)))) {
     console.log(`  ${String(rs.length).padStart(3)}x  ${fmt(median(rs.map((r) => r.measured))).padStart(5)}  ${k}`);
   }
+  const recorded = [...shapes].filter(([, rs]) => rs[0].toolCount).map(([k, rs]) => [k, median(rs.map((r) => r.measured))]).sort((a, b) => a[1] - b[1]);
+  if (recorded.length > 1) console.log(`  gap heaviest to lightest shape: ${fmt(recorded.at(-1)[1] - recorded[0][1])} per session`);
   // Parts of the heaviest shape: the one worth fixing first.
   const heavy = [...shapes].filter(([, rs]) => rs[0].toolCount).sort((a, b) => median(b[1].map((r) => r.measured)) - median(a[1].map((r) => r.measured)))[0];
   if (!heavy) return;
@@ -87,7 +89,8 @@ function inventory(project) {
     if (seen.has(p)) return;
     seen.add(p);
     const t = read(p);
-    if (t !== null) console.log(`  ${fmt(tokens(t.length)).padStart(6)}  ${t.split("\n").length} lines  ${label} ${p}`);
+    const n = t?.split("\n").length;
+    if (t !== null) console.log(`  ${fmt(tokens(t.length)).padStart(6)}  ${n} lines  ${label} ${p}${n > 200 ? "  <- over 200 lines" : ""}`);
     for (const m of (t ?? "").matchAll(/^@(\S+)/gm)) show("  import", resolve(dirname(p), m[1].replace(/^~/, homedir())));
   };
   console.log(`\nconfig for ${project}:`);
@@ -97,7 +100,7 @@ function inventory(project) {
   }
   const rules = join(project, ".claude/rules");
   if (existsSync(rules)) for (const f of readdirSync(rules, { recursive: true })) if (String(f).endsWith(".md")) show("rule", join(rules, String(f)));
-  const mem = join(PROJECTS_DIR, projectDirName(project), "memory");
+  const mem = join(PROJECTS_DIR, projectDirName(memoryRoot(project)), "memory");
   if (existsSync(mem)) {
     show("memory index", join(mem, "MEMORY.md"));
     const n = readdirSync(mem).filter((f) => f.endsWith(".md") && f !== "MEMORY.md").length;

@@ -8,7 +8,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { CLAUDE_DIR, fmt, parseArgs, PROJECTS_DIR, projectDirName, tokens } from "./lib.mjs";
+import { CLAUDE_DIR, fmt, memoryRoot, parseArgs, PROJECTS_DIR, projectDirName, tokens } from "./lib.mjs";
 
 const [cmd, ...rest] = process.argv.slice(2);
 const opts = parseArgs(rest, { project: "", all: false, json: false });
@@ -66,7 +66,7 @@ export function renderIndex(dir) {
 
 function memoryDirs() {
   if (opts.all) return readdirSync(PROJECTS_DIR).map((d) => join(PROJECTS_DIR, d, "memory")).filter(existsSync);
-  const dir = join(PROJECTS_DIR, projectDirName(resolve(opts.project || process.cwd())), "memory");
+  const dir = join(PROJECTS_DIR, projectDirName(memoryRoot(resolve(opts.project || process.cwd()))), "memory");
   return existsSync(dir) ? [dir] : [];
 }
 

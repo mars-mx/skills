@@ -1,8 +1,8 @@
 ---
 name: context-audit
-description: Audit what fills Claude's context window - the measured baseline per session (tool schemas per MCP server, skill listing, CLAUDE.md, hooks), the costliest tool calls of recent sessions with Haiku pattern search, and an aggressive cleanup of auto memory (MEMORY.md). Run as /context-audit [--days <n>] [--all] [--memory-only].
+description: Audit what fills Claude's context window - the measured baseline per session (tool schemas per MCP server, skill listing, CLAUDE.md, hooks), the costliest tool calls of recent sessions with Haiku pattern search, and an aggressive cleanup of auto memory (MEMORY.md). Run as /context-audit [--days <n>] [--all] [--memory-only] [--auto].
 disable-model-invocation: true
-argument-hint: "[--days <n>] [--all] [--memory-only]"
+argument-hint: "[--days <n>] [--all] [--memory-only] [--auto]"
 ---
 
 # Context audit
@@ -24,6 +24,7 @@ Never use `fork` for this: a fork ignores `model`. Briefs live in [references/br
 - **Rank by carried tokens.** A result of 10K tokens that stays for 200 requests costs 2M tokens of re-reads. Size alone misleads.
 - **Fix the source.** Prefer a config change (disable a server, scope a plugin to a project, move a CLAUDE.md section into a skill or path rule, add a filter hook) over a rule the model has to remember.
 - **Ask before changing anything.** Every config edit and every memory deletion goes through one approval in step 5. Memory is backed up first.
+- **`--auto`** is for unattended runs: ask nothing, change nothing, stop after step 5 with the table as the report.
 
 ## Steps
 
@@ -38,17 +39,16 @@ node ${CLAUDE_SKILL_DIR}/scripts/baseline.mjs --days <n> --all     # with --all
 
 Read stdout only. It prints the median baseline per tool shape (tool count, deferred count, entrypoint), the parts of the heaviest shape, and the config that feeds them: CLAUDE.md chain with imports, `.claude/rules`, the memory index, enabled plugins, MCP servers per scope, and SessionStart and UserPromptSubmit hooks.
 
-Judge each part against these targets:
+Judge relatively, not against fixed budgets: the gap between the heaviest and the lightest tool shape is avoidable, and so is every part that only the heavy shape has.
 
-| Part | Target | Typical fix |
+| Part | Check | Typical fix |
 | --- | --- | --- |
-| Whole baseline | under 40K tokens before the first prompt | the fixes below |
 | `tools mcp:<server>` | 0 at start: MCP tools are deferred by default | `ENABLE_TOOL_SEARCH` set to `auto` or `false` loads them upfront: remove it or set `true`; else disable the server in `/mcp` or move it to the one project that uses it |
-| `tools built-in` | stable; a jump between shapes means a host adds tools | name the entrypoint that adds them |
-| `skill_listing` | under 5K | per-project `enabledPlugins`, uninstall plugins not used in 30 days |
-| `instructions` (CLAUDE.md, rules) | under 200 lines per file | split per path into `.claude/rules/`, move workflows into skills, cut what the code already says |
-| `hook SessionStart` | under 1K | load style guides as a skill or output style instead of injecting them |
-| memory index | 0 to a few lines | step 4 |
+| `tools built-in` | same across shapes; a jump means a host (desktop app, extension) adds tools | name the entrypoint that adds them |
+| `skill_listing` | one of the largest parts | per-project `enabledPlugins`, uninstall plugins not used in 30 days |
+| `instructions` (CLAUDE.md, rules) | a file marked `over 200 lines` (the documented target) | split per path into `.claude/rules/`, move workflows into skills, cut what the code already says |
+| `hook SessionStart` | any text injected into every session | load style guides as a skill or output style instead of injecting them |
+| memory index | any line that is not a durable fact | step 4 |
 
 Two sessions of one project with very different baselines point to a shape problem: compare their tool counts first.
 
@@ -63,6 +63,12 @@ It prints totals, the tools ranked by carried tokens, the top 20 calls, and file
 Dispatch one Haiku pattern finder per batch file, all in one message, with the brief from [references/briefs.md](references/briefs.md).
 
 ### 3. Rank
+
+Haiku returns ids, not numbers. Get the numbers per pattern from the script:
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/toolcalls.mjs --out "$RUN_DIR" --sum <id,id,...>
+```
 
 Merge the baseline parts and the Haiku patterns into one list. Per finding: what it is, tokens per session (baseline) or carried tokens per week (tool pattern), evidence (shape, call IDs), and one concrete fix. Merge duplicates across batches. Drop patterns with fewer than 3 occurrences unless one call costs more than 1M carried tokens.
 
@@ -91,7 +97,7 @@ Also decide on **auto memory itself**. The harness keeps writing new memories in
 
 ### 5. Approve
 
-Show one table, ranked by tokens saved: finding, tokens, fix, and per memory file the class with a one-line reason. Then ask once with `AskUserQuestion` (multi-select): which config fixes to apply, whether to apply the memory plan as shown, and whether to turn auto memory off. Apply nothing that was not selected.
+Show one table, ranked by tokens saved: finding, tokens, fix, and per memory file the class with a one-line reason. With `--auto`, stop here and send the table as the report. Otherwise ask once with `AskUserQuestion` (multi-select): which config fixes to apply, whether to apply the memory plan as shown, and whether to turn auto memory off. Apply nothing that was not selected.
 
 ### 6. Apply
 
@@ -109,4 +115,4 @@ At most 10 lines: baseline before and the expected baseline after, carried token
 
 ## Running regularly
 
-Run it weekly, for example `/schedule` with the prompt `/context-audit --days 7 --all`. An unattended run stops at step 5: it reports the table and changes nothing.
+The audit reads local files in `~/.claude/`, so it must run on this machine: `/schedule` cloud agents cannot see them. Use `/loop 7d /context-audit --all --auto` in a long-running session, or a weekly local cron job with `claude -p "/context-audit --all --auto"`. Then run `/context-audit` interactively to apply the fixes you want.

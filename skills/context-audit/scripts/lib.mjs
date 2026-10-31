@@ -1,8 +1,9 @@
 // Shared helpers: find transcripts, stream their lines, and estimate tokens.
+import { execFileSync } from "node:child_process";
 import { createReadStream, readdirSync, statSync, existsSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 export const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude");
 export const PROJECTS_DIR = join(CLAUDE_DIR, "projects");
@@ -24,6 +25,16 @@ export function parseArgs(argv, defaults) {
 
 // Claude Code names a project directory after its path, with every non-alphanumeric char as "-".
 export const projectDirName = (path) => path.replace(/[^a-zA-Z0-9]/g, "-");
+
+// Auto memory belongs to the git repo: worktrees and subdirectories share the main checkout's dir.
+export function memoryRoot(path) {
+  try {
+    const common = execFileSync("git", ["-C", path, "rev-parse", "--path-format=absolute", "--git-common-dir"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return dirname(common);
+  } catch {
+    return path;
+  }
+}
 
 // Main and subagent transcripts modified in the last `days`, optionally for one project path.
 export function transcripts({ days, project }) {
