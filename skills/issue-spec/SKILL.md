@@ -33,7 +33,7 @@ new integration, schema   E1 + E2 in full · questions on API, data, boundaries 
 
 - **Questions only on E1 and E2.** Find answers yourself first: the issue and its comments, linked issues and PRs, the code, `CLAUDE.md`, docs, and `git log`. Ask only when the possible answers lead to a different intent, a different public API, a different data model, or different module boundaries. Everything in E3 you decide yourself. The exception is a critical E3 finding: one that risks security, data loss, money, or a break for consumers outside the repo.
 - **How to ask.** Never use `AskUserQuestion`. Ask in chat as numbered lines, each with your recommendation: `1. <question> → Empfehlung: <answer>`. The user answers with `1 nein` or `ok`.
-- **Short.** Chat in the user's language. Every message fits on one screen. Show structure as ASCII diagrams and `diff` blocks, not as prose. No recap of what the user said.
+- **Short.** Chat in the user's language. Every message fits on one screen. Show structure as ASCII diagrams and `diff` blocks, not as prose. Code blocks hold only diagrams and diffs, never sentences: the terminal wraps long lines in a code block and breaks the alignment. No recap of what the user said, and no text around the E1 and E2 templates.
 - **Simplest variant.** Every new persistent structure (table, queue, service, dependency, compatibility layer) appears in E2 next to the simplest alternative that meets the goal, each with its cost: new parts, rows, migrations. The new structure needs a concrete reason the simplest variant fails.
 - **No compatibility layers by default.** Internal APIs change, and every caller is updated in the same PR. Compatibility is only for consumers this PR cannot change: published packages, shipped clients, persisted data and events, external webhooks. Each compatibility layer is an E2 question.
 - **Proportionality.** Before the E2 draft, invoke `software-engineering:proportionality` with the Skill tool. Its order of thought shapes the architecture: the ideal first, then constraints, then fit inside the intended boundaries.
@@ -59,14 +59,17 @@ Done when you can state the intent in two sentences, or name the one point that 
 
 ### 3. E1 Intent
 
-Send:
+Send exactly this, as plain Markdown, not in a code block:
 
+```markdown
+**E1**
+- **Kunde:** <one sentence, at most 20 words: who gets what>
+- **Architektur:** <one sentence, at most 20 words: which areas take part, no mechanism>
+- **Stories:**
+  1. Als <role> will ich <x>, damit <y>.
 ```
-E1  Kunde:       <one sentence: who gets what>
-    Architektur: <one sentence: which part of the system does what>
-    Stories:     - Als <role> will ich <x>, damit <y>
-                 - ...
-```
+
+At most three stories, one line each. E1 names no table, service, endpoint, or sync job; those belong in E2. Something you found in the code that goes beyond the issue becomes a question here only if it changes the intent; otherwise it waits for E2.
 
 If you cannot write the two sentences, send only the one unclear point as question 1. Wait for the user's confirmation. Their corrections replace your sentences.
 
@@ -96,23 +99,31 @@ Done when the user confirmed E1.
    Then dispatch the `software-engineering:proportionality-review` agent with the intent, the draft, and the paths of the affected areas, for a verdict on every new structure and every decision that treats a subset of cases differently.
 
    Merge both into the draft. Rounds by complexity: `M` 1, `L` up to 2.
-3. **Send E2:**
+3. **Send E2** as plain Markdown. Only the diagram and the diffs are code blocks:
 
-   ````
-   E2  Komponenten
-       [orders-api]* ──ReturnCreated──▶ [dashboard]*        + neu  * geändert  - entfernt
+   ````markdown
+   **E2**
 
-       Public API
-       ```diff
-         GET /orders → Order[]
-       +   returns: Return[]
-       ```
-       Datenmodell: keine Änderung
-       Einfachste Variante: = Vorschlag | <variant>: <cost> · Vorschlag: <cost> · Grund: <why the simple one fails>
+   **Komponenten** (+ neu, * geändert, - entfernt)
+   ```
+   [orders-api]* ──ReturnCreated──▶ [dashboard]*
+   ```
 
-   Fragen:
+   **Public API**
+   ```diff
+     GET /orders → Order[]
+   +   returns: Return[]
+   ```
+
+   **Datenmodell:** keine Änderung
+
+   **Einfachste Variante:** = Vorschlag | <variant>: <cost> · Vorschlag: <cost> · Grund: <why the simple one fails>
+
+   **Fragen**
    1. <question> → Empfehlung: <answer>
    ````
+
+   Diagram lines stay under 70 characters, so the terminal does not wrap them.
 
    Review findings appear only as questions, and only when they change E1 or E2 or are critical. The rest you decide.
 
