@@ -19,7 +19,8 @@ Follow the existing pattern in <path:lines>. Use <existing helper or component> 
 Decisions already made: <decisions from plan.md that touch this slice>
 Approved UI additions: <additions from the spec with their tier, or none>. These are approved by the user; build them in the catalog with a story, without asking.
 Out of scope: every file not listed above. If the slice needs a change outside its files, stop and report it instead of making it.
-Edge cases: handle only the ones listed here: <Edge cases from plan.md that touch this slice, or none>. For any other edge case you meet, report it with the share of cases it affects instead of adding logic for it.
+Public APIs and data model: change only what is listed here: <Architecture diff entries that touch this slice, or none>. Update every caller of a changed API in the files above; build no shim, wrapper, alias, or deprecation path. If the slice needs any other API or data model change, stop and report it.
+Edge cases: handle only what the acceptance criteria require. For any other edge case you meet, report it with the share of cases it affects instead of adding logic for it.
 
 Done when:
 - <acceptance criterion 1, checkable>
@@ -75,9 +76,9 @@ Every point needs a concrete case. Change no files.
 
 ```
 Run the ponytail:ponytail-review skill on `git diff <default>...HEAD` in <repo path>. Apply the Ponytail ultra lens: also flag code the issue does not need.
-Also check the diff against this plan and report every acceptance criterion it misses or exceeds:
+Also check the diff against this plan and report every acceptance criterion it misses or exceeds. Report as Must fix every compatibility layer (shim, wrapper, alias, deprecation path) the plan does not name, and every public API or data model change the Architecture diff does not show:
 
-<plan.md goal, acceptance criteria, decisions>
+<plan.md goal, acceptance criteria, Architecture diff, decisions>
 
 <Round 2+: only review `git diff <checkpoint>`. Findings already handled, do not report them again: <list>>
 

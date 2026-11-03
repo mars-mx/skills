@@ -40,7 +40,7 @@ Agent-scale code review, following the Claude Code team's process.
 | --- | --- | --- |
 | `review-setup` | `/review-setup` only | Sets up a repo for review: `REVIEW.md`, `CLAUDE.md` checks, PR template, risk tiers, and `CODEOWNERS`, plus a checklist of hosting-platform settings. |
 | `pre-pr-review` | automatic before a PR | Runs the checks, sets the risk tier, reviews the diff with at most 3 rounds, and writes the PR body. |
-| `issue-spec` | `/issue-spec <idea or issue>` only | Specs an issue with you so `issue-to-pr` runs without questions: decisions with reasons, assumptions with evidence, testable acceptance criteria, a verification plan, and a Ponytail `ultra` review. Publishes a technical review artifact that shows decisions, assumptions, contract layers with before and after, and data model changes with the migration, for you to approve. For UI it creates a Design artifact and a Storybook spec story via `ux-design`, pushes the story to the default branch, and labels the issue `spec:ready`. |
+| `issue-spec` | `/issue-spec <idea or issue>` only | Specs an issue with you in three layers so `issue-to-pr` runs without questions: E1 intent (customer and architecture view, user stories) and E2 architecture (components, public API, data model as a diff, next to the simplest variant) are settled in chat, E3 implementation is left to Claude. Questions go in chat as numbered lines with a recommendation, never as question cards. Ponytail `ultra` and `proportionality-review` check the architecture before you see it. For UI it creates a Design artifact via `ux-design` and exports its artboards as PNGs through Claude in Chrome. The issue records what was agreed, with a Mermaid architecture diff and the screenshots attached, and gets the label `spec:ready`. |
 | `issue-to-pr` | `/issue-to-pr <issue>` only | Takes an issue to a mergeable PR: issue preflight with a Ponytail `ultra` plan review, a verification plan (Playwright, unit, E2E) with an environment baseline, Sonnet implementers under an Opus orchestrator, Ponytail review, tests and screenshots, `pre-pr-review`, and a PR watched until CI and the Claude reviewer are green. It messages you only at a gate, each one checked first by an independent Sonnet subagent. |
 
 **`issue-to-pr` requirements.** The preflight stops the run (gate G0) unless these are in place:
@@ -51,9 +51,9 @@ Agent-scale code review, following the Claude Code team's process.
 
 Gates, their verifier checklists, and example messages live in `skills/issue-to-pr/references/gates.md`.
 
-For a `spec:ready` issue, `issue-to-pr` takes the spec's decisions as given, screenshots the spec story in the baseline, and puts a Spec and a Final screenshot per viewport (`viewports` in `ux.config.json`, default `[1440, 390]`) into the PR body.
+For a `spec:ready` issue, `issue-to-pr` takes the spec's decisions as given, treats its Architecture diff as the boundary of the change (anything beyond it fires G1), downloads the issue's screenshots in the baseline, and puts a Spec and a Final screenshot per viewport (`viewports` in `ux.config.json`, default `[1440, 390]`) into the PR body.
 
-`issue-spec` and `issue-to-pr` need the `software-engineering` plugin: `issue-spec` loads `proportionality` before intake, records edge cases with their share and response, and runs an `proportionality-review` pass after the plan review; `issue-to-pr` checks special cases in its plan review and sends edge cases its implementers report through `proportionality-review`.
+`issue-spec` and `issue-to-pr` need the `software-engineering` plugin: `issue-spec` loads `proportionality` before the architecture draft and runs a `proportionality-review` pass on it; `issue-to-pr` checks special cases in its plan review and sends edge cases its implementers report through `proportionality-review`.
 
 ### deps-skills
 
@@ -102,13 +102,14 @@ Skills load only when their description matches. To apply `humanize` in every se
 
 ### software-engineering
 
-Architecture judgment: the main design serves the common case, and an edge case gets special handling only in proportion to its measured impact.
+Architecture judgment: the main design serves the common case, and an edge case gets special handling only in proportion to its measured impact. `brainstorm` applies the same order of thought to open questions, read-only and with a source for every claim.
 
 | Skill or agent | Invocation | Purpose |
 | --- | --- | --- |
 | `proportionality` | automatic before special cases, caps, locks, retries, or modes for a subset of cases | Sets the order of thought: the ideal design first, then sourced constraints, then fit inside the intended service boundaries (existing violations are debt, not precedent), then each edge case sized as N of M affected with the cost of a wrong result. Picks the lowest rung of a response ladder: accept and mark, contain at the edge, or redesign. Includes disproportionate-versus-proportional patterns and three worked examples, one of them on later needs: extensible, not extended. |
 | `proportionality-review` (agent, Opus) | called by `proportionality`, `issue-spec`, and `issue-to-pr` before a special case or redesign | Loads `proportionality` as its rules and reviews one decision or a whole spec with read-only repo access. Defaults to accept and mark, returns "insufficient evidence" when the numbers are missing, and rejects proposals that change behavior for unaffected cases or cross a boundary. |
 | `report` | `/report <what went wrong>` only | Condenses this session's transcript, has a Sonnet subagent find the wrong turn, its cause, and the rule that should have caught it, and drafts an abstracted issue with a proposed rule change. Creates the issue on `mars-mx/skills` (public) only after you approve the draft. |
+| `brainstorm` | `/brainstorm <problem or question>` only | Finds the best solution with you instead of the first one that works: checks the goal and its premise, gathers facts, lays out three to five different options, names the criteria, recommends one, and asks you pointed questions as plain chat text. Answers fit on one screen. Stays read-only until you say "setz das so um" or similar; agreement alone is no go. Explores the codebase with Haiku `Explore` subagents, reads docs for the installed version, and queries logs and DB replicas read-only where access is documented. Every claim carries a source; what needs your access goes into a `NICHT ÜBERPRÜFT:` list at the bottom. |
 
 The agent lives in `plugin-agents/`, not `agents/`, because all plugins share the repository root and a root `agents/` folder would load into every plugin.
 
@@ -152,7 +153,7 @@ Then install a plugin from it:
 
 ### Manual
 
-Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/proportionality-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:proportionality-review` to `proportionality-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`. Both use `proportionality` and the `proportionality-review` agent from `software-engineering`.
+Copy any skill folder into `~/.claude/skills/` to make it available in all projects. Copy `plugin-agents/proportionality-review.md` into `~/.claude/agents/` together with `proportionality`, and change the agent name in that skill from `software-engineering:proportionality-review` to `proportionality-review`. Copy `ux-audit` together with `ux-design`: it reads the rules and scripts from `../ux-design`. Copy `issue-spec` together with `issue-to-pr`: `issue-to-pr` reads the spec format from `../issue-spec`. Both use `proportionality` and the `proportionality-review` agent from `software-engineering`. Copy `brainstorm` together with `proportionality`, which it loads for design questions.
 
 ## Creating New Skills
 

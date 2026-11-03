@@ -65,15 +65,11 @@ Every UI change starts from a **design spec**: the expected result that step 5 v
 
 Without one, spawn a `general-purpose` subagent to create it as a **Claude Design artifact**, so the catalog search stays out of your context. Give it the user's request, the catalog paths from `ux.config.json`, the Storybook URL, and these instructions:
 
-> Find the Design artifact type with the Artifact tool (`action: "quickstart"`, `intent: "design"`), create the artifact from its `type_url` with the title `<feature> spec`, and follow the type's instructions to fill it. Draw one artboard per screen of the change, at each width in `viewports`, built to look like the project's catalog components (use their Storybook stories as reference). Annotate every region with its catalog component, variant, props, and story (`*.stories.tsx` file and story name). Add one artboard per state: loading, empty, error, disabled. Put every component to add or extend on a separate "Additions" artboard, marked with its tier and the reason no existing component fits. You are done when every region maps to a story or to a marked addition. Reply with the artifact URL.
+> Find the Design artifact type with the Artifact tool (`action: "quickstart"`, `intent: "design"`), create the artifact from its `type_url` with the title `<feature> spec`, and follow the type's instructions to fill it. Draw one artboard per screen and state of the change, at each width in `viewports`, titled `<screen>-<state>-<width>` in kebab case (for example `checkout-default-1440`), since the PNG export names each file after its artboard, built to look like the project's catalog components (use their Storybook stories as reference). Annotate every region with its catalog component, variant, props, and story (`*.stories.tsx` file and story name). Cover the states loading, empty, error, and disabled the same way, one artboard per state and width. Put every component to add or extend on a separate "Additions" artboard, marked with its tier and the reason no existing component fits. You are done when every region maps to a story or to a marked addition. Reply with the artifact URL.
 
-With Storybook and an issue number, add to the instructions:
+Open the artifact for the user (`Artifact`, `action: "open"`). Their confirmation approves the listed additions for step 4; build only after it.
 
-> Also write the **spec story** `src/specs/<issue>-<slug>.spec.stories.tsx` with the title `Specs/#<issue> <title>`: one story per screen and state of the artifact, named `<Screen><State>` after them (for example `CheckoutDefault`), composed only of catalog components with static mock data, wrapped in the decorators of `.storybook/preview`. An addition renders as a placeholder box with a dashed border, labeled with the addition's name and tier. Take a screenshot of every story at each width in `viewports` and compare it with its artboard. You are done when every artboard has a story that matches it and the repo's typecheck and lint pass. Reply with the artifact URL and the story path.
-
-Open the artifact for the user (`Artifact`, `action: "open"`), and the spec story in the running Storybook. Their confirmation approves the listed additions for step 4; build only after it.
-
-**Spec mode.** When the `issue-spec` skill invokes this skill, stop after step 3 and return the artifact URL, the spec story path, and the approved additions. `issue-to-pr` builds and verifies later.
+**Spec mode.** When the `issue-spec` skill invokes this skill, stop after step 3 and return the artifact URL and the approved additions. `issue-to-pr` builds and verifies later.
 
 ## 4. Build from the catalog
 
@@ -96,7 +92,7 @@ After approval:
 
 ## 5. Verify
 
-Open the changed screens in the browser (Claude in Chrome or Playwright, whichever the session has) and screenshot every region and state from the spec, at each width in `viewports`. Compare each screenshot with the spec: the spec story's screenshot at the same width where one exists, otherwise the Design artifact (open it in the browser next to the app). A placeholder region of the spec story is compared with its artboard:
+Open the changed screens in the browser (Claude in Chrome or Playwright, whichever the session has) and screenshot every region and state from the spec, at each width in `viewports`. Compare each screenshot with the spec: the spec screenshot at the same width where one exists (an issue from `issue-spec` carries them), otherwise the Design artifact (open it in the browser next to the app):
 
 - the component in each region is the one the spec names, in the named variant
 - it looks like its artboard or the user's mockup: spacing, alignment, color, typography

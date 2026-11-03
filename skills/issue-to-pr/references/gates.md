@@ -53,7 +53,8 @@ Evidence:
 - An open question whose possible answers lead to materially different work, and that the issue, the code, the docs, and the git history cannot settle.
 - The only fix within the issue's scope is a workaround, and the long-term fix needs extensive changes: a schema migration, a public API change, a cross-module refactor, or a new dependency.
 - The issue contradicts the code, another issue, or a documented decision.
-- A `spec:ready` issue contradicts the current code, or its spec story is missing on the default branch.
+- A `spec:ready` issue contradicts the current code.
+- A slice needs a change its spec's Architecture diff does not show: a public API, the data model, a new table, queue, service, or dependency, or a compatibility layer.
 
 **Checklist:**
 - [ ] The question or conflict is stated in one sentence and appears in `plan.md`.
@@ -194,7 +195,7 @@ Evidence:
 - [ ] Every category in `verification.md` ran green or carries a valid skip reason.
 - [ ] "Review nötig" matches the risk tier from `pre-pr-review`: `Low` no, `Medium` and `High` yes.
 - [ ] The PR body has Summary, Testing, Risk, How to revert, Review, and Decisions.
-- [ ] For a UI change: the PR body has a Screenshots section with a Spec and a Final image per screen, state, and viewport (only Final without a spec story), and no path into `RUN_DIR` is left in it.
+- [ ] For a UI change: the PR body has a Screenshots section with a Spec and a Final image per screen, state, and viewport (only Final without spec screenshots), and no path into `RUN_DIR` is left in it.
 
 **Example:**
 

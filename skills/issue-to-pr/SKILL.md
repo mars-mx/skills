@@ -17,6 +17,7 @@ Invoking this skill is the user's request for a feature branch and a PR. It over
 - **Silence.** From start to the final gate, send the user nothing but gate messages.
 - **Gates.** A gate is red (blocks, needs the user) or the final green one. Before any gate message goes out, run the **gate check**: a fresh `general-purpose` subagent with `model: "sonnet"` works through that gate's checklist from `references/gates.md` against your evidence, using the verifier brief in [references/briefs.md](references/briefs.md). On REJECTED, act on its reasons and check again once. Rejected twice: send the gate with the verifier's dissent as an Evidence item. Send the message in chat, and also through `PushNotification` (load it with `ToolSearch` first) when available.
 - **Subagents.** Implementers, fixers, test writers, and the gate verifier are fresh `general-purpose` agents with `model: "sonnet"`, never `fork` (a fork ignores `model` and inherits your context). Reviewers are fresh `general-purpose` agents on your model. Every brief follows the templates in `references/briefs.md`.
+- **No compatibility layers.** Internal APIs change, and every caller is updated in the same PR. A shim, wrapper, alias, or deprecation path is built only when the plan names it for a consumer outside the repo.
 - **Caps.** Every fix loop runs at most 3 rounds, then its gate fires.
 - **Evidence** is output observed in this run: a command and its result, a file and line, a screenshot path, a URL. A claim without evidence is unverified.
 - **Run directory.** Keep all run files in `RUN_DIR=${TMPDIR:-/tmp}/issue-to-pr/<repo>-<issue>/`: `plan.md`, `verification.md`, logs, and `screenshots/`. Nothing from it is committed.
@@ -44,11 +45,12 @@ Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default
 2. Write `RUN_DIR/plan.md`:
    - **Goal** and **acceptance criteria**, each one testable.
    - **Assumptions** table: assumption, evidence that supports it, `long-term` or `workaround`, and what breaks if it is wrong.
+   - **Architecture diff**: the three blocks Components, Public API, and Data model from `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`, taken from the spec or drafted by you.
    - **Complexity**: `S` (one area, no contract change), `M` (several areas or a new behavior users see), `L` (schema, public API, auth, billing, cross-cutting refactor, or a new dependency).
    - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Mark which slices touch disjoint files and can run in parallel.
 3. Run the **plan review**: a reviewer subagent with the plan-review brief, which applies the Ponytail `ultra` rules (question every part the need does not justify) and judges each assumption as long-term or workaround. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3. Update the plan after each round. Keep `ultra` mode inside the reviewer; your own session stays at its level.
 
-**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, Acceptance criteria, Out of scope, Edge cases, Decisions, Assumptions, Contracts and data model, Verification, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its contract and data model changes were approved on the review artifact, and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves), or a spec story path missing on the default branch, fires G1.
+**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, User stories, Acceptance criteria, Out of scope, Architecture diff, Decisions, Assumptions, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its Architecture diff is the approved boundary of the change, and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves) fires G1.
 
 Done when every assumption is backed by evidence or decided with a recorded reason, and no G1 trigger holds. A G1 trigger that holds fires G1.
 
@@ -59,15 +61,15 @@ Write `RUN_DIR/verification.md` with three categories: **Playwright** (browser t
 - the planned tests: file, what each asserts (mapped to an acceptance criterion), and the command that runs them, or
 - the skip reason. Valid reasons describe the change: "the change touches no UI", "the repo has no E2E harness and the change crosses no service boundary". The environment is never a valid reason: "it does not run locally right now" is a G2 trigger, not a skip.
 
-With a spec, take the categories from its Verification section.
+With a spec, map every test to its acceptance criteria.
 
-Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec story, also start Storybook and screenshot every spec story in headless Chromium at each width in `ux.config.json` → `viewports` (missing: `[1440, 390]`), saved as `RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`, with screen and state taken from the story name (`CheckoutDefault` → `checkout-default`). Any failure or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
+Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec that has a UI spec, also download every screenshot it lists, named by its alt text `<screen>-<state>-<width>`: `curl -sfL -H "Authorization: Bearer $(gh auth token)" <asset URL> -o RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`. Any failure, or a screenshot missing from the issue, or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
 
 Done when every category has tests or a valid skip reason, and the baseline is green.
 
 ### 4. Implement
 
-For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:proportionality-review` agent. Commit each accepted slice.
+For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. With a spec, a slice that needs a change the Architecture diff does not show (a public API, the data model, a new table, queue, service, or dependency, a compatibility layer) fires G1; without a spec, update the plan's Architecture diff. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:proportionality-review` agent. Commit each accepted slice.
 
 Done when every slice is committed and the typecheck passes.
 
@@ -81,14 +83,13 @@ Done when a round returns no new Must fix or Should fix finding. After 3 rounds 
 
 1. Dispatch Sonnet test writers with the test brief, one per category in `verification.md`.
 2. Run every planned category plus typecheck, lint, and build. A red result goes back to you: diagnose the cause, then send a fix brief. Fix the code, not the test, unless the test contradicts an acceptance criterion.
-3. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at each width in `viewports`. Save them as `RUN_DIR/screenshots/<screen>-<state>-final-<width>.png`, with the same screen and state names as the spec screenshots. Compare each with its spec screenshot at the same width, desktop first; a placeholder region of the spec story is compared with its artboard in the Design artifact. Without a spec story, compare against the issue and, if the `ux-design` skill applies, against its spec.
-4. With a spec story: delete it in a commit (`spec: remove #<issue> spec story`). Its screenshots from the baseline stay the reference.
+3. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at each width in `viewports`. Save them as `RUN_DIR/screenshots/<screen>-<state>-final-<width>.png`, with the same screen and state names as the spec screenshots. Compare each with its spec screenshot at the same width, desktop first. Without spec screenshots, compare against the issue and, if the `ux-design` skill applies, against its spec.
 
 Done when every command is green and the screenshots match. After 3 red rounds, G4 fires.
 
 ### 7. Pre-PR review (gate G5)
 
-Invoke `pre-pr-review`. If the skill is not available, G5 fires and the run stops. Its fixes go through Sonnet fix briefs like step 5. Keep its **risk tier** and its PR body, and add **Decisions** from the plan to the body. For a UI change, add a **Screenshots** section: per screen and state, a table with a row per viewport (desktop first) and the columns Spec and Final. The cells reference the local files by their absolute path, as in `![Spec Desktop](/abs/RUN_DIR/screenshots/checkout-default-spec-1440.png)`; step 8 uploads them. Without a spec story, the table has only the Final column. Write the body to `RUN_DIR/pr-body.md`.
+Invoke `pre-pr-review`. If the skill is not available, G5 fires and the run stops. Its fixes go through Sonnet fix briefs like step 5. Keep its **risk tier** and its PR body, and add **Decisions** from the plan to the body. For a UI change, add a **Screenshots** section: per screen and state, a table with a row per viewport (desktop first) and the columns Spec and Final. A Spec cell takes the screenshot's asset URL from the issue. A Final cell references the local file by its absolute path, as in `![Final Desktop](/abs/RUN_DIR/screenshots/checkout-default-final-1440.png)`; step 8 uploads it. Without spec screenshots, the table has only the Final column. Write the body to `RUN_DIR/pr-body.md`.
 
 Done when `pre-pr-review` reports "ready for PR". "Blocked" fires G5.
 
