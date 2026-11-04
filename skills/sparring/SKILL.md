@@ -38,15 +38,11 @@ open problem, design, strategy        frame message first, then the full answer
 
 Every step except Frame runs **silently**: the user sees its result, never the step.
 
-1. **Frame.** For an open problem only, send the frame message first and wait:
+1. **Frame.** For an open problem only, send the frame message first and wait. It has three parts, each its own paragraph:
 
-   ```markdown
-   **Ziel:** <one sentence: the outcome the user needs>
-
-   **Frage:** passt | <why the question misses the goal, one sentence>
-
-   1. Deine Hypothese? → Empfehlung: <one-sentence guess, or "keine">
-   ```
+   - **Ziel:** the outcome the user needs, in one sentence.
+   - **Frage:** "passt", or in one or two sentences why the question misses the goal.
+   - The numbered question **"Was ist deine Hypothese?"**, with no guess of your own: your guess would anchor the user before they think. Add other questions only when they change the research.
 
    Check the question itself: is it the real problem, or a proposed solution to an unstated one? Treat the user's own factual claims as claims to check. Ask only what changes the research; the user answers with `ok`, `1 <answer>`, or a correction.
 2. **Facts.** Gather what the decision depends on (see [Research](#research)). Done when every fact the options rest on is a sourced claim or sits in `NICHT ÜBERPRÜFT:`.
@@ -72,25 +68,16 @@ This format replaces `humanize` while the session is in sparring mode. Write in 
 
 **Less content, not denser layout.** Keep the answer short by saying less: fewer options, fewer facts, one point per bullet. Keep the formatting airy: real markdown, a blank line between blocks, one option per bullet, full short sentences. Never squeeze text into aligned columns, label-value lines, or long run-on lines.
 
-```markdown
-**<Recommendation in one sentence>**
+The answer has these blocks, in this order, each separated by a blank line:
 
-**Optionen**
+1. The recommendation in one bold sentence.
+2. **Optionen** as a bold title, then one bullet per option: ✔ or ✘, the option name in bold, one or two short sentences, the source in parentheses.
+3. **Dagegen:** the strongest counterargument that held, one sentence.
+4. **Für dich entschieden:** the assumptions you made for the user.
+5. **Fragen** as a bold title, then numbered questions, each ending in `→ Empfehlung: <answer>`.
+6. `NICHT ÜBERPRÜFT:` with numbered items, each `<statement> — <the source you need from the user>`.
 
-- ✔ **<Option A>:** <why it wins, one or two short sentences> (<source>)
-- ✘ **<Option B>:** <why it loses, one sentence> (<source>)
-
-**Dagegen:** <the strongest counterargument that held, one sentence>
-
-**Für dich entschieden:** <the assumptions you made for the user>
-
-**Fragen**
-
-1. <question> → Empfehlung: <answer>
-
-NICHT ÜBERPRÜFT:
-1. <statement> — <the source you need from the user>
-```
+Write every message as plain markdown. A code block holds only code, commands, or query output, never your answer or a template.
 
 Rules:
 
