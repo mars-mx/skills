@@ -40,10 +40,12 @@ Every step except Frame runs **silently**: the user sees its result, never the s
 
 1. **Frame.** For an open problem only, send the frame message first and wait:
 
-   ```
-   Ziel:    <one sentence: the outcome the user needs>
-   Frage:   passt | <why the question misses the goal, one line>
-   1. Deine Hypothese? → Empfehlung: <one-line guess, or "keine">
+   ```markdown
+   **Ziel:** <one sentence: the outcome the user needs>
+
+   **Frage:** passt | <why the question misses the goal, one sentence>
+
+   1. Deine Hypothese? → Empfehlung: <one-sentence guess, or "keine">
    ```
 
    Check the question itself: is it the real problem, or a proposed solution to an unstated one? Treat the user's own factual claims as claims to check. Ask only what changes the research; the user answers with `ok`, `1 <answer>`, or a correction.
@@ -68,13 +70,21 @@ A subagent's report is a set of claims. Before a claim carries weight in the rec
 
 This format replaces `humanize` while the session is in sparring mode. Write in the user's language.
 
-```
-**<Empfehlung in one line>**
+**Less content, not denser layout.** Keep the answer short by saying less: fewer options, fewer facts, one point per bullet. Keep the formatting airy: real markdown, a blank line between blocks, one option per bullet, full short sentences. Never squeeze text into aligned columns, label-value lines, or long run-on lines.
 
-A <option>   ✔ <why it wins> (<source>)
-B <option>   ✘ <why it loses> (<source>)
-Dagegen:     <the strongest counterargument that held>
-Entschieden: <assumptions you made for the user, comma-separated>
+```markdown
+**<Recommendation in one sentence>**
+
+**Optionen**
+
+- ✔ **<Option A>:** <why it wins, one or two short sentences> (<source>)
+- ✘ **<Option B>:** <why it loses, one sentence> (<source>)
+
+**Dagegen:** <the strongest counterargument that held, one sentence>
+
+**Für dich entschieden:** <the assumptions you made for the user>
+
+**Fragen**
 
 1. <question> → Empfehlung: <answer>
 
@@ -84,10 +94,10 @@ NICHT ÜBERPRÜFT:
 
 Rules:
 
-- **Short.** Every message fits on one screen, about 12 lines. One line per option, counterargument, and question. No recap of what the user said, no description of what you researched, no background beyond the line that changes the decision; more on request.
+- **Short.** The whole answer fits on one screen. At most three options shown, one to two sentences each. No recap of what the user said, no description of what you researched, no background beyond what changes the decision; more on request.
 - **Sources inline.** A source is a short reference in parentheses: `file:line`, `pkg@version docs`, a query result. No sentences about sources.
 - **Questions.** Never use `AskUserQuestion`. Ask in chat as numbered lines, each with your recommendation, at most three. Ask only what you cannot find out yourself and what changes the recommendation.
-- **Hypothesis.** When the user stated one, add one line: `Deine Hypothese: hält | hält nicht, weil <reason>`.
-- Leave out every line that would be empty.
+- **Hypothesis.** When the user stated one, add one sentence after the recommendation: whether it holds and why.
+- Leave out every block that would be empty.
 
 Keep the header `NICHT ÜBERPRÜFT:` literal, in every language. An item belongs there only when checking it needs a source you cannot reach without the user: credentials, or data or a system with no documented access. Questions about the user's intent, business, or plans are numbered questions. Each item names the missing source.
