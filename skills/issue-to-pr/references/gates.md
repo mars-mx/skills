@@ -122,13 +122,14 @@ Evidence:
 
 ## G4 Verification
 
-**Trigger:** after 3 fix rounds, a planned test, typecheck, lint, or build is still red; or a UI screenshot still contradicts the issue or the spec.
+**Trigger:** after 3 fix rounds, a planned test, typecheck, lint, or build is still red; a new or changed test still passes on the default branch; or a UI screenshot still contradicts the issue or the spec.
 
 **Checklist:**
 - [ ] The last run of each red command is in Evidence, with the failing test name and assertion.
 - [ ] The same command was green in the baseline, so the failure comes from this change.
 - [ ] Each round's diagnosis and fix is listed.
 - [ ] No test was weakened, skipped, or deleted to get green.
+- [ ] Every new or changed test ran against the default branch (step 6, point 3: the tests from HEAD on a checkout of `<default>` in a temporary worktree) and failed there. A test that passes there went back as a fix brief, unless it is a pure regression test on existing behavior with its reason in `verification.md`.
 - [ ] For a screenshot mismatch: the spec and final screenshot paths at the same width are in Evidence, with the region that differs.
 
 **Example:**

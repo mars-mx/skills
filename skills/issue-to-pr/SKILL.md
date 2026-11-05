@@ -1,6 +1,6 @@
 ---
 name: issue-to-pr
-description: Take a GitHub issue end to end to a mergeable PR - issue preflight, verification plan, Sonnet implementation, Ponytail review, tests, pre-pr-review, PR with CI and Claude review watch. Run as /issue-to-pr <issue>.
+description: Take a GitHub issue end to end to a mergeable PR - issue preflight, verification plan at agreed seams, test-driven Sonnet implementation (red → green), Ponytail review, verification, pre-pr-review, PR with CI and Claude review watch. Run as /issue-to-pr <issue>.
 disable-model-invocation: true
 argument-hint: "<issue number or URL>"
 ---
@@ -46,11 +46,12 @@ Any failure fires G0. Then create the branch `issue-<n>-<slug>` from the default
    - **Goal** and **acceptance criteria**, each one testable.
    - **Assumptions** table: assumption, evidence that supports it, `long-term` or `workaround`, and what breaks if it is wrong.
    - **Architecture diff**: the three blocks Components, Public API, and Data model from `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`, taken from the spec or drafted by you.
+   - **Seams**: the public interfaces tests may use, one line each with what a test there catches and what it misses, in the format of the Seams section in `spec.md`. Every acceptance criterion names one.
    - **Complexity**: `S` (one area, no contract change), `M` (several areas or a new behavior users see), `L` (schema, public API, auth, billing, cross-cutting refactor, or a new dependency).
-   - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Mark which slices touch disjoint files and can run in parallel.
+   - **Slices**: the file-level change list, cut into slices one subagent can finish alone. Every acceptance criterion belongs to exactly one slice; a criterion that needs several areas makes them one slice. Mark which slices touch disjoint files and can run in parallel.
 3. Run the **plan review**: a reviewer subagent with the plan-review brief, which applies the Ponytail `ultra` rules (question every part the need does not justify) and judges each assumption as long-term or workaround. Rounds by complexity: `S` 1, `M` up to 2, `L` up to 3. Update the plan after each round. Keep `ultra` mode inside the reviewer; your own session stays at its level.
 
-**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, User stories, Acceptance criteria, Out of scope, Architecture diff, Decisions, Assumptions, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its Architecture diff is the approved boundary of the change, and its additions are approved. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves) fires G1.
+**Spec.** An issue with the label `spec:ready` was specced with the user by `issue-spec` (format: `${CLAUDE_SKILL_DIR}/../issue-spec/references/spec.md`). Take its Goal, User stories, Acceptance criteria, Out of scope, Architecture diff, Seams, Decisions, Assumptions, UI spec, and Complexity into `plan.md` as they are: its decisions are the user's, its Architecture diff is the approved boundary of the change, its seams are the approved test boundaries, and its additions are approved. Without a spec, you set the seams yourself and record them as a decision with their reason. The plan review then runs one round and judges only the slices and what the code changed since the spec. A spec that contradicts the current code (including an assumption the code disproves) fires G1.
 
 Done when every assumption is backed by evidence or decided with a recorded reason, and no G1 trigger holds. A G1 trigger that holds fires G1.
 
@@ -58,10 +59,10 @@ Done when every assumption is backed by evidence or decided with a recorded reas
 
 Write `RUN_DIR/verification.md` with three categories: **Playwright** (browser tests of UI), **Unit**, and **E2E** (flows across process or service boundaries: API, worker, database). Per category, either:
 
-- the planned tests: file, what each asserts (mapped to an acceptance criterion), and the command that runs them, or
+- the planned tests: file, seam, acceptance criterion, what each asserts, the command that runs them, and where they are written: in the red → green loop of step 4, or by a test writer in step 6, with the reason the loop cannot write it, or
 - the skip reason. Valid reasons describe the change: "the change touches no UI", "the repo has no E2E harness and the change crosses no service boundary". The environment is never a valid reason: "it does not run locally right now" is a G2 trigger, not a skip.
 
-With a spec, map every test to its acceptance criteria.
+A test at a seam `plan.md` does not list is not allowed.
 
 Then run the **baseline**: on the unchanged branch, run the command of every planned category plus the repo's typecheck, lint, and build. With a spec that has a UI spec, also download every screenshot it lists, named by its alt text `<screen>-<state>-<width>`: `curl -sfL -H "Authorization: Bearer $(gh auth token)" <asset URL> -o RUN_DIR/screenshots/<screen>-<state>-spec-<width>.png`. Any failure, or a screenshot missing from the issue, or a harness that does not start fires G2 and ends the run. A broken environment is the user's to fix.
 
@@ -69,23 +70,30 @@ Done when every category has tests or a valid skip reason, and the baseline is g
 
 ### 4. Implement
 
-For each slice, dispatch a Sonnet implementer with the implementer brief. Run slices with disjoint files in parallel, in one message. After each slice returns, read its diff yourself and check it against the brief; send a fix brief for gaps. With a spec, a slice that needs a change the Architecture diff does not show (a public API, the data model, a new table, queue, service, or dependency, a compatibility layer) fires G1; without a spec, update the plan's Architecture diff. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:proportionality-review` agent. Commit each accepted slice.
+For each slice, dispatch a Sonnet implementer with the implementer brief. It works the slice's acceptance criteria one at a time in a red → green cycle: one test at the criterion's seam, run it and record the red output, write the minimal code, run it and record the green output, then the next criterion. All tests first and then all code is not allowed. Run slices with disjoint files in parallel, in one message.
 
-Done when every slice is committed and the typecheck passes.
+After each slice returns, read its diff and its cycles yourself and check them against the brief. Send a fix brief for gaps: a criterion without a cycle, a red output from a syntax or import error instead of the expected failure, a test at a seam `plan.md` does not list, or code beyond what the tests and the criteria tested in step 6 need. With a spec, a slice that needs a change the Architecture diff does not show (a public API, the data model, a new table, queue, service, or dependency, a compatibility layer) fires G1; without a spec, update the plan's Architecture diff. An edge case an implementer reports goes through `software-engineering:proportionality`; before you add handling for it, get a verdict from the `software-engineering:proportionality-review` agent. Commit each accepted slice.
+
+Done when every slice is committed, every acceptance criterion planned for step 4 has a test with a recorded red and green output, and the typecheck passes.
 
 ### 5. Implementation review (gate G3)
 
-Dispatch a reviewer subagent with the implementation-review brief: it runs `ponytail:ponytail-review` on `git diff <default>...HEAD` with the `ultra` lens and checks the diff against `plan.md`. Triage each finding: fix, not applicable (with reason), or pre-existing. Group the fixes into Sonnet fix briefs, review their diffs, commit. Re-review only the diff since the last round, passing the findings already handled.
+Dispatch a reviewer subagent with the implementation-review brief: it runs `ponytail:ponytail-review` on `git diff <default>...HEAD` with the `ultra` lens and checks the diff against `plan.md`. Refactoring belongs here, not in the loop of step 4: it comes in as review findings, and the tests from step 4 stay green through it. Triage each finding: fix, not applicable (with reason), or pre-existing. Group the fixes into Sonnet fix briefs, review their diffs, commit. Re-review only the diff since the last round, passing the findings already handled.
 
 Done when a round returns no new Must fix or Should fix finding. After 3 rounds with new findings, G3 fires.
 
 ### 6. Verification (gate G4)
 
-1. Dispatch Sonnet test writers with the test brief, one per category in `verification.md`.
+1. The tests `verification.md` plans for step 4, typically Unit and E2E, were written there. Dispatch Sonnet test writers with the test brief only for the tests it plans for step 6, one per category: tests the loop cannot write, typically Playwright against the finished UI.
 2. Run every planned category plus typecheck, lint, and build. A red result goes back to you: diagnose the cause, then send a fix brief. Fix the code, not the test, unless the test contradicts an acceptance criterion.
-3. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at each width in `viewports`. Save them as `RUN_DIR/screenshots/<screen>-<state>-final-<width>.png`, with the same screen and state names as the spec screenshots. Compare each with its spec screenshot at the same width, desktop first. Without spec screenshots, compare against the issue and, if the `ux-design` skill applies, against its spec.
+3. Run every new or changed test against the default branch:
+   - Check out `<default>` in a temporary worktree: `git worktree add --detach RUN_DIR/base <default>`. Install dependencies the way the repo does, and confirm an existing test passes there.
+   - Copy the test files from the branch: `git -C RUN_DIR/base checkout <branch> -- <test files>`. Run only the new or changed test cases, by name with the runner's filter. Then `git worktree remove --force RUN_DIR/base`.
+   - Each case must fail there on its assertion. A case that fails only because a new interface is missing counts, with its step 4 red output as evidence.
+   - A test that passes without the change is tautological or tests the wrong thing; it goes back as a fix brief. The only exception is a pure regression test on existing behavior, with its reason in `verification.md`.
+4. If the change touches UI, take screenshots of every changed screen and state in headless Chromium, logged in the same way as the Playwright tests (their `storageState` file or setup project), at each width in `viewports`. Save them as `RUN_DIR/screenshots/<screen>-<state>-final-<width>.png`, with the same screen and state names as the spec screenshots. Compare each with its spec screenshot at the same width, desktop first. Without spec screenshots, compare against the issue and, if the `ux-design` skill applies, against its spec.
 
-Done when every command is green and the screenshots match. After 3 red rounds, G4 fires.
+Done when every command is green, every new or changed test failed on the default branch or is a recorded regression test, and the screenshots match. After 3 red rounds, G4 fires.
 
 ### 7. Pre-PR review (gate G5)
 

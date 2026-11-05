@@ -1,6 +1,6 @@
 ---
 name: issue-spec
-description: Spec a GitHub issue with the user in three layers - intent, architecture, implementation - so /issue-to-pr can run it without questions. Every question is settled in chat first; the issue only records what was agreed - user stories, acceptance criteria, an architecture diff, decisions, and for UI screenshots of the Design artifact. Run as /issue-spec <idea or issue>.
+description: Spec a GitHub issue with the user in three layers - intent, architecture, implementation - so /issue-to-pr can run it without questions. Every question is settled in chat first; the issue only records what was agreed - user stories, acceptance criteria, an architecture diff, test seams, decisions, and for UI screenshots of the Design artifact. Run as /issue-spec <idea or issue>.
 disable-model-invocation: true
 argument-hint: "<idea text, issue number, or issue URL>"
 ---
@@ -17,7 +17,7 @@ The issue is the written record of what was agreed, not a place to agree. The us
 
 ```
 E1 Intent          what it is about, from the customer and the architecture view  → user confirms
-E2 Architecture    areas touched, how they integrate, public API, data model      → user approves
+E2 Architecture    areas, how they integrate, public API, data model, seams       → user approves
 E3 Implementation  everything else                                                → you decide, never ask
 ```
 
@@ -31,7 +31,7 @@ new integration, schema   E1 + E2 in full · questions on API, data, boundaries 
 
 ## Ground rules
 
-- **Questions only on E1 and E2.** Find answers yourself first: the issue and its comments, linked issues and PRs, the code, `CLAUDE.md`, docs, and `git log`. Ask only when the possible answers lead to a different intent, a different public API, a different data model, or different module boundaries. Everything in E3 you decide yourself. The exception is a critical E3 finding: one that risks security, data loss, money, or a break for consumers outside the repo.
+- **Questions only on E1 and E2.** Find answers yourself first: the issue and its comments, linked issues and PRs, the code, `CLAUDE.md`, docs, and `git log`. Ask only when the possible answers lead to a different intent, a different public API, a different data model, different module boundaries, or different test seams. Everything in E3 you decide yourself. The exception is a critical E3 finding: one that risks security, data loss, money, or a break for consumers outside the repo.
 - **How to ask.** Never use `AskUserQuestion`. Ask in chat as numbered lines, each with your recommendation: `1. <question> → Empfehlung: <answer>`. The user answers with `1 nein` or `ok`.
 - **Short.** Chat in the user's language. Every message fits on one screen. Show structure as ASCII diagrams and `diff` blocks, not as prose. Code blocks hold only diagrams and diffs, never sentences: the terminal wraps long lines in a code block and breaks the alignment. No recap of what the user said, and no text around the E1 and E2 templates.
 - **Simplest variant.** Every new persistent structure (table, queue, service, dependency, compatibility layer) appears in E2 next to the simplest alternative that meets the goal, each with its cost: new parts, rows, migrations. The new structure needs a concrete reason the simplest variant fails.
@@ -73,13 +73,13 @@ At most three stories, one line each. E1 names no table, service, endpoint, or s
 
 If you cannot write the two sentences, send only the one unclear point as question 1. Wait for the user's confirmation. Their corrections replace your sentences.
 
-**Fast path.** For complexity `S` with no public API, data model, or UI change, send E1 and E2 as one message, skip the reviews in step 4, and go on with step 6 after the user's `ok`.
+**Fast path.** For complexity `S` with no public API, data model, or UI change, send E1 and E2 as one message, with the seams as one line `**Seams:** S1 <existing test seam>`, skip the reviews in step 4, and go on with step 6 after the user's `ok`.
 
 Done when the user confirmed E1.
 
 ### 4. E2 Architecture
 
-1. **Draft.** Write the architecture diff in the three blocks of [references/spec.md](references/spec.md): components, public API, data model. Show only what changes and its direct neighbors. Add the simplest-variant line, and the assumptions E2 rests on with their evidence.
+1. **Draft.** Write the architecture diff in the three blocks of [references/spec.md](references/spec.md): components, public API, data model. Show only what changes and its direct neighbors. Add the simplest-variant line, the seams, and the assumptions E2 rests on with their evidence. A **seam** is a public interface a test observes behavior through: one line each with what a test there catches and what it misses (rules in `references/spec.md`). Tests later go only at these seams, so a seam you are unsure of is an E2 question.
 2. **Review, silently.** Before the user sees the draft, dispatch a fresh `general-purpose` reviewer on your model with this brief:
 
    ```
@@ -119,6 +119,9 @@ Done when the user confirmed E1.
 
    **Einfachste Variante:** = Vorschlag | <variant>: <cost> · Vorschlag: <cost> · Grund: <why the simple one fails>
 
+   **Seams**
+   - **S1** `<public interface>` · fängt: <what a test there catches> · verpasst: <what it misses>
+
    **Fragen**
    1. <question> → Empfehlung: <answer>
    ````
@@ -140,9 +143,9 @@ Done when the user confirmed the artifact and every screen, state, and viewport 
 
 ### 6. Write the spec
 
-Silent. Write `RUN_DIR/spec.md` in the format of [references/spec.md](references/spec.md). It takes E1, the stories, E2, and the user's answers as agreed, and draws the component diagram from E2 as Mermaid. You add only E3 content: acceptance criteria derived from the stories, the out-of-scope list, complexity, and affected areas.
+Silent. Write `RUN_DIR/spec.md` in the format of [references/spec.md](references/spec.md). It takes E1, the stories, E2, and the user's answers as agreed, and draws the component diagram from E2 as Mermaid. You add only E3 content: acceptance criteria derived from the stories, each assigned to one approved seam, the out-of-scope list, complexity, and affected areas.
 
-Done when every story has at least one testable acceptance criterion and nothing in the spec contradicts the chat.
+Done when every story has at least one testable acceptance criterion, every acceptance criterion names an approved seam, and nothing in the spec contradicts the chat.
 
 ### 7. Ready check
 
@@ -160,9 +163,10 @@ Answer each item with yes or no and the evidence you looked at:
 1. Every section the format does not allow to be left out is present, in order.
 2. Every user story has at least one acceptance criterion, and every acceptance criterion names its story and is testable: a test can pass or fail on it.
 3. The Architecture diff shows the same components, API changes, and data model changes as the approved E2, nothing more or less.
-4. Every user answer appears as a decision; every decision has a reason; every workaround names the long-term change it postpones.
-5. The spec agrees with the code: run read-only checks (grep, git log) in <repo path> on the files it names. Every assumption's evidence holds.
-6. For UI: <RUN_DIR/screenshots> has a PNG for every screen, state, and viewport the UI section lists.
+4. The Seams section lists the same seams as the approved E2, and every acceptance criterion names exactly one of them.
+5. Every user answer appears as a decision; every decision has a reason; every workaround names the long-term change it postpones.
+6. The spec agrees with the code: run read-only checks (grep, git log) in <repo path> on the files it names. Every assumption's evidence holds.
+7. For UI: <RUN_DIR/screenshots> has a PNG for every screen, state, and viewport the UI section lists.
 End with `CONFIRMED` or `REJECTED: <what to change>`.
 ```
 

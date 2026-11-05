@@ -12,7 +12,7 @@ The issue body. `issue-to-pr` reads these headings by name, so keep them in Engl
 2. ...
 
 ## Acceptance criteria
-1. (Story 1) <Testable: a test can pass or fail on it.>
+1. (Story 1 · S1) <Testable: a test at seam S1 can pass or fail on it.>
 2. ...
 
 ## Out of scope
@@ -41,6 +41,10 @@ none
 
 ### Simplest variant
 <= proposal | <variant>: <cost> · proposal: <cost> · reason: <why the simple one fails>
+
+## Seams
+- **S1** `<public interface: route, exported function, event, page>` · catches: <what a test there catches> · misses: <what it misses>
+- ...
 
 ## Decisions
 | Decision | Reason | Kind | Source |
@@ -83,4 +87,11 @@ Rules for the Architecture diff:
 - **Public API and Data model** are `diff` blocks: unchanged context lines with two spaces, `+` and `-` for the change. Add an `erDiagram` only for a new entity. A public API is any contract another module, service, or client reads: HTTP routes, exported functions and types, events, queue messages, DB tables read by other services.
 - Every API change shows its callers in `Affected areas`. A change that breaks a consumer outside the repo names its compatibility handling as a decision with source `user`.
 
-`Affected areas` names paths, not slices: `issue-to-pr` cuts the slices. Implementation details (functions, helpers, file layout inside a module, test plan) do not go into the spec; `issue-to-pr` decides them.
+Rules for Seams:
+
+- A **seam** is a public interface a test observes behavior through, without reaching inside. Tests go only at the seams listed here; they are boundary decisions, approved with E2.
+- One line per seam, numbered `S1`, `S2`, ...: the interface, what a test there catches, what it misses.
+- Every acceptance criterion names exactly one seam from this list.
+- On the fast path of `issue-spec` (complexity `S`, no public API, data model, or UI change), one line `S1 <existing test seam>` is enough.
+
+`Affected areas` names paths, not slices: `issue-to-pr` cuts the slices. Implementation details (functions, helpers, file layout inside a module, test files and cases) do not go into the spec; `issue-to-pr` decides them within the seams.
